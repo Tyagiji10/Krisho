@@ -195,7 +195,7 @@ const Navbar = () => {
   return (
     <>
       <nav className={`fixed top-0 z-[60] w-full transition-all duration-300 border-b border-border/40 backdrop-blur-md ${isDark ? 'bg-slate-900/90' : 'bg-gradient-to-b from-[#F0FFF4] to-white/90'}`}>
-        <div className="container mx-auto px-4 md:px-8">
+        <div className="container mx-auto px-2 md:px-6">
           {/* Main Desktop Row */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center py-3 md:py-5 gap-4">
             
@@ -238,14 +238,6 @@ const Navbar = () => {
                   <button className="p-2 text-slate-500 hover:text-primary transition-colors">
                     <Bell size={20} />
                   </button>
-                  <Link to="/cart" className="relative p-2 text-slate-500">
-                    <ShoppingCart size={20} />
-                    {cartItems.length > 0 && (
-                      <span className="absolute top-1.5 right-1.5 bg-secondary text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                        {cartItems.length}
-                      </span>
-                    )}
-                  </Link>
                 </div>
               )}
 
