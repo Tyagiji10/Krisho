@@ -38,7 +38,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col bg-background dark:bg-slate-900 transition-colors duration-300 overflow-x-hidden">
       <Navbar />
-      <main className={`flex-grow container mx-auto px-0 md:px-3 pb-24 md:pb-12 ${userInfo ? 'pt-[200px] md:pt-28' : 'pt-24 md:pt-28'}`}>
+      <main className={`flex-grow container mx-auto px-2 md:px-6 pb-24 md:pb-12 ${userInfo ? 'pt-[200px] md:pt-28' : 'pt-24 md:pt-28'}`}>
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/marketplace" element={<MarketplaceScreen />} />

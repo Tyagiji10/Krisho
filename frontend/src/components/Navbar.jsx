@@ -195,7 +195,7 @@ const Navbar = () => {
   return (
     <>
       <nav className={`fixed top-0 z-[60] w-full transition-all duration-300 border-b border-border/40 backdrop-blur-md ${isDark ? 'bg-slate-900/90' : 'bg-gradient-to-b from-[#F0FFF4] to-white/90'}`}>
-        <div className="container mx-auto px-0 md:px-3">
+        <div className="container mx-auto px-2 md:px-6">
           {/* Main Desktop Row */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center py-3 md:py-5 gap-4">
             
@@ -395,8 +395,12 @@ const Navbar = () => {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-1">Welcome</p>
                       <p className="text-xs font-black text-slate-700 dark:text-slate-200 leading-none truncate max-w-[80px]">{userInfo.name.split(' ')[0]}</p>
                     </div>
-                    <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center font-black shadow-lg shadow-primary/20 group-hover:scale-105 transition-all">
-                      {userInfo.name.charAt(0)}
+                    <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center font-black shadow-lg shadow-primary/20 group-hover:scale-105 transition-all overflow-hidden">
+                      {userInfo.profileImage ? (
+                        <img src={userInfo.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        userInfo.name.charAt(0).toUpperCase()
+                      )}
                     </div>
                   </button>
 

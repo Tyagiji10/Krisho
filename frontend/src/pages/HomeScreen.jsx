@@ -21,9 +21,9 @@ const UserPortal = ({ user }) => {
   const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
 
   return (
-    <div className="space-y-12 px-0 md:px-0">
+    <div className="space-y-12 px-8 md:px-0">
       {/* Quick Actions Header */}
-      <section className="px-0 md:px-0">
+      <section className="px-1 md:px-0">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white">
@@ -63,7 +63,7 @@ const UserPortal = ({ user }) => {
       </section>
 
       {/* Merged Marketplace (Digital Mandi) */}
-      <section className="pt-8 border-t border-border dark:border-slate-800 px-0 md:px-0">
+      <section className="pt-8 border-t border-border dark:border-slate-800 px-4 md:px-0">
         <div className="flex justify-between items-end mb-6">
           <div>
             <h2 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white">Digital Mandi</h2>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from '../store/slices/authSlice';
+import { logout, setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -12,14 +12,30 @@ import {
   Bell, 
   Shield,
   ChevronRight,
-  Globe
+  Globe,
+  Camera,
+  Star,
+  X,
+  Check
 } from 'lucide-react';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../utils/cropImage';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import '../firebase';
 
 const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
   const { userInfo } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [notifications, setNotifications] = useState(true);
+
+  const [imageSrc, setImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
@@ -50,10 +66,52 @@ const ProfileScreen = () => {
     }
   };
 
+  const onFileChange = async (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageSrc(reader.result?.toString() || '');
+        setIsCropping(true);
+      });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const handleSaveCrop = async () => {
+    try {
+      setUploadingImage(true);
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      
+      const storage = getStorage();
+      const storageRef = ref(storage, `profiles/${userInfo._id}_${Date.now()}.jpg`);
+      await uploadString(storageRef, croppedImage, 'data_url');
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      };
+      const { data } = await axios.put('/api/users/profile', { profileImage: downloadURL }, config);
+      dispatch(setCredentials(data));
+      
+      setIsCropping(false);
+      setImageSrc(null);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   if (!userInfo) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20 px-8">
+    <div className="max-w-4xl mx-auto space-y-8 pb-20 px-8 relative">
       <header>
         <h1 className="text-2xl md:text-4xl font-black text-foreground dark:text-white">{t('profile')} <span className="text-primary">.</span></h1>
         <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your account and app preferences</p>
@@ -62,28 +120,61 @@ const ProfileScreen = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         {/* Profile Card */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-card dark:bg-slate-800 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-border dark:border-slate-700 text-center shadow-xl">
-            <div className="relative inline-block">
-              <img 
-                src={userInfo.profileImage || `https://ui-avatars.com/api/?name=${userInfo.name}&background=random`} 
-                className="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-[2.5rem] object-cover border-4 border-white dark:border-slate-700 shadow-2xl"
-                alt="Profile"
-              />
-              <div className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-lg shadow-lg">
-                <Shield size={14} />
-              </div>
-            </div>
-            <h2 className="text-xl md:text-2xl font-black text-foreground dark:text-white mt-4 md:mt-6">{userInfo.name}</h2>
-            <p className="text-primary font-bold uppercase tracking-widest text-[9px] mt-1">{userInfo.role}</p>
+          <div className="bg-card dark:bg-slate-800 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-border dark:border-slate-700 text-center shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/10 -z-0"></div>
             
-            <div className="mt-6 md:mt-8 space-y-3 text-left">
-              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-                <Mail size={16} className="shrink-0" />
-                <span className="text-xs md:text-sm font-medium truncate">{userInfo.email}</span>
+            <div className="relative z-10">
+              <div className="relative inline-block group">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl md:rounded-[2.5rem] border-4 border-white dark:border-slate-700 shadow-2xl overflow-hidden bg-primary flex items-center justify-center text-white text-4xl md:text-5xl font-black">
+                  {userInfo.profileImage ? (
+                    <img 
+                      src={userInfo.profileImage} 
+                      className="w-full h-full object-cover"
+                      alt="Profile"
+                    />
+                  ) : (
+                    <span>{userInfo.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-black/40 rounded-2xl md:rounded-[2.5rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm"
+                >
+                  <Camera size={32} className="text-white" />
+                </button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={onFileChange} 
+                  accept="image/*" 
+                  className="hidden" 
+                />
+                <div className="absolute -bottom-1 -right-1 bg-primary text-white p-1.5 rounded-lg shadow-lg pointer-events-none">
+                  <Shield size={14} />
+                </div>
               </div>
-              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
-                <MapPin size={16} className="shrink-0" />
-                <span className="text-xs md:text-sm font-medium">{userInfo.city}, {userInfo.state}</span>
+
+              <h2 className="text-xl md:text-2xl font-black text-foreground dark:text-white mt-4 md:mt-6">{userInfo.name}</h2>
+              <p className="text-primary font-bold uppercase tracking-widest text-[9px] mt-1">{userInfo.role}</p>
+
+              {/* Supplier Rating */}
+              {userInfo.role === 'supplier' && (
+                <div className="flex items-center justify-center gap-1 mt-3 bg-secondary/10 w-fit mx-auto px-3 py-1.5 rounded-xl border border-secondary/20">
+                  <Star size={14} className="text-secondary fill-secondary" />
+                  <span className="text-sm font-black text-secondary">{userInfo.rating || 4.5}</span>
+                  <span className="text-[10px] font-bold text-secondary/70 ml-1 uppercase tracking-widest">Rating</span>
+                </div>
+              )}
+              
+              <div className="mt-6 md:mt-8 space-y-3 text-left">
+                <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
+                  <Mail size={16} className="shrink-0" />
+                  <span className="text-xs md:text-sm font-medium truncate">{userInfo.email}</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
+                  <MapPin size={16} className="shrink-0" />
+                  <span className="text-xs md:text-sm font-medium">{userInfo.city}, {userInfo.state}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -133,7 +224,6 @@ const ProfileScreen = () => {
             </div>
 
             <div className="space-y-3">
-
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-transparent hover:border-primary/10 transition-all">
                 <div className="flex items-center gap-3">
                   <Bell className="text-slate-400" size={18} />
@@ -157,6 +247,47 @@ const ProfileScreen = () => {
           </button>
         </div>
       </div>
+
+      {/* Crop Modal */}
+      {isCropping && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] overflow-hidden flex flex-col h-[60vh] relative shadow-2xl border border-white/10">
+            <div className="relative flex-grow bg-slate-900">
+              <Cropper
+                image={imageSrc}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            </div>
+            <div className="p-6 bg-card flex gap-4 justify-end border-t border-border dark:border-slate-700">
+              <button 
+                onClick={() => { setIsCropping(false); setImageSrc(null); }}
+                className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
+                disabled={uploadingImage}
+              >
+                <X size={18} /> Cancel
+              </button>
+              <button 
+                onClick={handleSaveCrop}
+                className="px-6 py-3 rounded-xl font-black text-white bg-primary hover:bg-primary-dark transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                   <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                ) : (
+                  <><Check size={18} /> Save Photo</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

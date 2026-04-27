@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
   state: String,
   city: String,
   profileImage: String,
+  rating: {
+    type: Number,
+    default: 4.5
+  },
   firebaseUid: {
     type: String,
     default: undefined,

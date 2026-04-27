@@ -30,6 +30,8 @@ export const authUser = async (req, res, next) => {
           role: user.role,
           city: user.city,
           state: user.state,
+          profileImage: user.profileImage,
+          rating: user.rating || 4.5,
           token: generateToken(user._id),
           isMock: true
         });
@@ -60,6 +62,8 @@ export const authUser = async (req, res, next) => {
         role: user.role,
         city: user.city,
         state: user.state,
+        profileImage: user.profileImage,
+        rating: user.rating || 4.5,
         token: generateToken(user._id),
       });
     } else {
@@ -106,6 +110,8 @@ export const registerUser = async (req, res, next) => {
         role: newUser.role,
         city: newUser.city,
         state: newUser.state,
+        profileImage: newUser.profileImage,
+        rating: newUser.rating || 4.5,
         token: generateToken(newUser._id),
         isMock: true
       });
@@ -238,6 +244,8 @@ export const getUserProfile = async (req, res, next) => {
         role: user.role,
         state: user.state,
         city: user.city,
+        profileImage: user.profileImage,
+        rating: user.rating || 4.5,
       });
     } else {
       res.status(404);
@@ -252,7 +260,7 @@ export const getUserProfile = async (req, res, next) => {
 // @access  Private
 export const updateUserProfile = async (req, res, next) => {
   try {
-    const { role, state, city } = req.body;
+    const { role, state, city, profileImage } = req.body;
     
     if (!isDbConnected(mongoose)) {
       const user = mockUsers.find(u => u._id.toString() === req.user._id.toString());
@@ -260,6 +268,8 @@ export const updateUserProfile = async (req, res, next) => {
         user.role = role || user.role;
         user.state = state || user.state;
         user.city = city || user.city;
+        user.profileImage = profileImage || user.profileImage;
+        if (!user.rating) user.rating = 4.5;
         return res.json(user);
       }
       res.status(404);
@@ -271,6 +281,7 @@ export const updateUserProfile = async (req, res, next) => {
       user.role = role || user.role;
       user.state = state || user.state;
       user.city = city || user.city;
+      user.profileImage = profileImage || user.profileImage;
       
       const updatedUser = await user.save();
       res.json({
@@ -280,6 +291,8 @@ export const updateUserProfile = async (req, res, next) => {
         role: updatedUser.role,
         state: updatedUser.state,
         city: updatedUser.city,
+        profileImage: updatedUser.profileImage,
+        rating: updatedUser.rating,
         token: generateToken(updatedUser._id),
       });
     } else {
