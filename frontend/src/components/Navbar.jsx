@@ -439,7 +439,7 @@ const Navbar = () => {
             {userInfo && (
               <button 
                 onClick={() => setShowLocationModal(true)}
-                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl order-3"
+                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-slate-800 rounded-2xl order-3"
               >
                 <MapPin size={16} className="text-primary" />
                 <div className="flex items-center gap-1 text-xs font-black text-slate-700 dark:text-slate-200">
