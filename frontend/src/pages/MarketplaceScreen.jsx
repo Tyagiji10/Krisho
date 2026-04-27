@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
