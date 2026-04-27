@@ -24,7 +24,9 @@ import {
   Milk,
   Bell,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Camera,
+  ScanLine
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -263,35 +265,35 @@ const Navbar = () => {
             {/* Functional Search Bar with Suggestions & Voice */}
             {userInfo && (
               <div className="relative flex-grow max-w-2xl mx-auto w-full order-3 md:order-none" ref={suggestionRef}>
-                <form onSubmit={handleSearch} className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
-                    <Search size={18} />
+                <form onSubmit={handleSearch} className="relative group shadow-sm rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 overflow-hidden">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 transition-colors">
+                    <Search size={22} strokeWidth={2} />
                   </div>
                   <input 
                     type="text" 
-                    placeholder={t('search_placeholder')}
+                    placeholder="Search or ask a question..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl py-3.5 pl-12 pr-24 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm font-medium shadow-sm"
+                    className="w-full bg-transparent py-3.5 pl-12 pr-[120px] outline-none transition-all text-base font-medium text-slate-800 dark:text-slate-200"
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-4 text-slate-700 dark:text-slate-300">
+                    <button type="button" className="hover:text-primary transition-colors">
+                      <Camera size={22} strokeWidth={2} />
+                    </button>
                     <button 
                       type="button" 
                       onClick={startListening} 
-                      className={`p-2 rounded-xl transition-all ${
+                      className={`hover:text-primary transition-all ${
                         isListening 
-                          ? 'bg-primary text-white animate-pulse shadow-lg shadow-primary/40' 
-                          : 'text-slate-400 hover:text-primary hover:bg-primary/5'
+                          ? 'text-primary animate-pulse' 
+                          : ''
                       }`}
                     >
-                      <Mic size={18} className={isListening ? 'animate-bounce' : ''} />
+                      <Mic size={22} strokeWidth={2} className={isListening ? 'animate-bounce' : ''} />
                     </button>
-                    <button 
-                      type="submit"
-                      className="bg-primary text-white p-2 rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-                    >
-                      <ArrowRight size={18} />
+                    <button type="button" className="hover:text-primary transition-colors">
+                      <ScanLine size={22} strokeWidth={2} />
                     </button>
                   </div>
                 </form>
