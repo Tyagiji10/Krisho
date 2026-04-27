@@ -24,8 +24,6 @@ const userSchema = new mongoose.Schema({
   profileImage: String,
   firebaseUid: {
     type: String,
-    unique: true,
-    sparse: true,
     default: undefined,
   },
   paymentDetails: {

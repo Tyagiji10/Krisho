@@ -37,7 +37,12 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/krisho';
 
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ MongoDB Connected'))
+  .then(() => {
+    console.log('✅ MongoDB Connected');
+    try {
+      mongoose.connection.collection('users').dropIndex('firebaseUid_1').catch(() => {});
+    } catch(e) {}
+  })
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // Socket.io connection logic
