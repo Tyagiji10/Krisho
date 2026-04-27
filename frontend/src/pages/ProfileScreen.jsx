@@ -102,9 +102,26 @@ const ProfileScreen = () => {
       setImageSrc(null);
     } catch (e) {
       console.error(e);
-      alert('Failed to upload image');
+      alert('Failed to upload image. Please verify your Firebase Storage settings.');
+      setIsCropping(false);
+      setImageSrc(null);
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveProfile = async () => {
+    if (window.confirm("Are you sure you want to remove your profile picture?")) {
+      try {
+        const config = {
+          headers: { Authorization: `Bearer ${userInfo.token}` },
+        };
+        const { data } = await axios.put('/api/users/profile', { profileImage: '' }, config);
+        dispatch(setCredentials(data));
+      } catch (e) {
+        console.error(e);
+        alert('Failed to remove image');
+      }
     }
   };
 
@@ -156,6 +173,15 @@ const ProfileScreen = () => {
 
               <h2 className="text-xl md:text-2xl font-black text-foreground dark:text-white mt-4 md:mt-6">{userInfo.name}</h2>
               <p className="text-primary font-bold uppercase tracking-widest text-[9px] mt-1">{userInfo.role}</p>
+              
+              {userInfo.profileImage && (
+                <button 
+                  onClick={handleRemoveProfile}
+                  className="text-xs font-bold text-red-500 hover:text-red-600 mt-2 hover:underline transition-all block mx-auto"
+                >
+                  Remove Photo
+                </button>
+              )}
 
               {/* Supplier Rating */}
               {userInfo.role === 'supplier' && (
