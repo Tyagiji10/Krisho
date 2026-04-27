@@ -161,7 +161,7 @@ const LandingPage = () => (
             <div className={`${feature.bg} ${feature.color} w-20 h-20 rounded-2xl flex items-center justify-center shrink-0`}>
               {feature.icon}
             </div>
-            <div className="space-y-2">
+            <div className="flex-1 space-y-2">
               <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">{feature.title}</h3>
               <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 leading-relaxed">{feature.desc}</p>
             </div>
