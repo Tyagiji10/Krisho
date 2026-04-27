@@ -268,9 +268,12 @@ export const updateUserProfile = async (req, res, next) => {
         user.role = role || user.role;
         user.state = state || user.state;
         user.city = city || user.city;
-        user.profileImage = profileImage || user.profileImage;
+        user.profileImage = profileImage !== undefined ? profileImage : user.profileImage;
         if (!user.rating) user.rating = 4.5;
-        return res.json(user);
+        return res.json({
+          ...user,
+          token: generateToken(user._id)
+        });
       }
       res.status(404);
       throw new Error('User not found');
