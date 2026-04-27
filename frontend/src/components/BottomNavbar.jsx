@@ -19,7 +19,6 @@ const BottomNavbar = () => {
 
   const navItems = [
     { id: '/', icon: <Home size={22} strokeWidth={1.5} />, label: 'Home' },
-    { id: '/marketplace', icon: <Menu size={22} strokeWidth={1.5} />, label: 'Mandi' },
     { id: '/orders', icon: <PackageCheck size={22} strokeWidth={1.5} />, label: 'Orders' },
     { 
       id: '/cart', 

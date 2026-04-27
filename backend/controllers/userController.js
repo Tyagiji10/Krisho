@@ -8,12 +8,21 @@ import { mockUsers, isDbConnected, generateId } from '../utils/mockData.js';
 // @access  Public
 export const authUser = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, firebaseUid } = req.body;
 
     // DB Check and Fallback
     if (!isDbConnected(mongoose)) {
-      const user = mockUsers.find(u => u.email === email && u.password === password);
+      let user = null;
+      if (firebaseUid) {
+        user = mockUsers.find(u => u.firebaseUid === firebaseUid);
+      }
+      if (!user) {
+        user = mockUsers.find(u => u.email === email);
+      }
+
       if (user) {
+        if (firebaseUid && !user.firebaseUid) user.firebaseUid = firebaseUid;
+        
         return res.json({
           _id: user._id,
           name: user.name,
@@ -26,13 +35,24 @@ export const authUser = async (req, res, next) => {
         });
       } else {
         res.status(401);
-        throw new Error('Invalid email or password (Mock Mode)');
+        throw new Error('User profile not found (Mock Mode)');
       }
     }
 
-    const user = await User.findOne({ email });
+    let user = null;
+    if (firebaseUid) {
+      user = await User.findOne({ firebaseUid });
+    }
+    if (!user) {
+      user = await User.findOne({ email });
+    }
 
-    if (user && (password === user.password)) {
+    if (user) {
+      if (firebaseUid && !user.firebaseUid) {
+        user.firebaseUid = firebaseUid;
+        await user.save();
+      }
+      
       res.json({
         _id: user._id,
         name: user.name,
@@ -44,7 +64,7 @@ export const authUser = async (req, res, next) => {
       });
     } else {
       res.status(401);
-      throw new Error('Invalid email or password');
+      throw new Error('User profile not found in database');
     }
   } catch (error) {
     next(error);
@@ -56,7 +76,7 @@ export const authUser = async (req, res, next) => {
 // @access  Public
 export const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, state, city } = req.body;
+    const { name, email, password, role, state, city, firebaseUid } = req.body;
 
     // DB Check and Fallback
     if (!isDbConnected(mongoose)) {
@@ -72,6 +92,7 @@ export const registerUser = async (req, res, next) => {
         name,
         email,
         password,
+        firebaseUid,
         role,
         state,
         city
@@ -102,6 +123,7 @@ export const registerUser = async (req, res, next) => {
       name,
       email,
       password,
+      firebaseUid,
       role,
       state,
       city

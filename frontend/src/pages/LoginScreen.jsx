@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { LogIn, Mail, Lock, AlertCircle, User, MapPin, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,11 +32,20 @@ const LoginScreen = () => {
     setError('');
     
     try {
-      const { data } = await axios.post('/api/users/login', { email, password });
+      // 1. Sign in with Firebase Authentication
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUid = userCredential.user.uid;
+
+      // 2. Fetch user profile from backend database
+      const { data } = await axios.post('/api/users/login', { firebaseUid, email });
       dispatch(setCredentials({ ...data }));
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to login. Please try again.');
+      let message = err.response?.data?.message || err.message || 'Failed to login. Please try again.';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        message = 'Invalid email or password.';
+      }
+      setError(message);
     } finally {
       setIsLoading(false);
     }

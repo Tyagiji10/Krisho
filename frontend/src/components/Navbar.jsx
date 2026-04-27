@@ -229,6 +229,12 @@ const Navbar = () => {
               {/* Mobile Only Right Actions (When Logged In) */}
               {userInfo && (
                 <div className="flex md:hidden items-center gap-2">
+                  <button 
+                    onClick={toggleDarkMode}
+                    className="p-2 text-slate-500 hover:text-primary transition-colors"
+                  >
+                    {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
                   <button className="p-2 text-slate-500 hover:text-primary transition-colors">
                     <Bell size={20} />
                   </button>

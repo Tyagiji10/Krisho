@@ -75,6 +75,18 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
     fetchProducts();
   }, [keyword, page, selectedCategory, userInfo]);
 
+  // Force responsive view mode when embedded in the Home page
+  useEffect(() => {
+    if (isEmbedded) {
+      const handleResize = () => {
+        setViewMode(window.innerWidth < 768 ? 'list' : 'grid');
+      };
+      handleResize(); // Set initially
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [isEmbedded]);
+
   return (
     <div className={`space-y-8 ${!isEmbedded ? 'px-8' : ''}`}>
       {/* Header & Search */}

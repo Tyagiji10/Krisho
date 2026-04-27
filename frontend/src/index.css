@@ -46,6 +46,12 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+@media (max-width: 768px) {
+  html {
+    font-size: 14.4px; /* 10% reduction */
+  }
+}
+
 .glass {
   @apply backdrop-blur-xl border border-white/20 dark:border-white/5;
 }

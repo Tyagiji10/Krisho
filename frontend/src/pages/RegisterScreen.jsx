@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 import { UserPlus, Mail, Lock, User, MapPin, Briefcase, AlertCircle, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { indianStates, topCitiesByState } from '../utils/indiaData';
@@ -34,10 +36,16 @@ const RegisterScreen = () => {
     setError('');
 
     try {
+      // 1. Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUid = userCredential.user.uid;
+
+      // 2. Save user profile to backend database
       const { data } = await axios.post('/api/users', {
         name,
         email,
         password,
+        firebaseUid,
         role,
         state,
         city,
@@ -46,7 +54,10 @@ const RegisterScreen = () => {
       navigate('/');
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      let message = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      if (err.code === 'auth/email-already-in-use') message = 'This email is already registered.';
+      if (err.code === 'auth/weak-password') message = 'Password should be at least 6 characters.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
