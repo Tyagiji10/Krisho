@@ -275,7 +275,7 @@ const Navbar = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
-                    className="w-full bg-transparent py-3.5 pl-12 pr-[120px] outline-none transition-all text-base font-medium text-slate-800 dark:text-slate-200"
+                    className="w-full bg-transparent py-3.5 pl-12 pr-[120px] outline-none transition-all text-base font-medium text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-700 dark:text-slate-300">
                     <button 
