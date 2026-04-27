@@ -199,8 +199,8 @@ const Navbar = () => {
           {/* Main Desktop Row */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center py-3 md:py-5 gap-4">
             
-            {/* Logo & Delivery Info */}
-            <div className="flex items-center justify-between md:justify-start gap-4 md:gap-8 shrink-0">
+            {/* Top Row for Mobile (Logo + Right Actions) / Left side for Desktop */}
+            <div className="flex items-center justify-between w-full md:w-auto shrink-0 gap-4 md:gap-8">
               <Link to="/" className="flex items-center gap-2 group">
                 <div className="bg-primary p-2 rounded-xl text-white group-hover:rotate-12 transition-all shadow-lg shadow-primary/20">
                   <Leaf size={22} />
@@ -208,7 +208,7 @@ const Navbar = () => {
                 <span className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tighter">Krisho</span>
               </Link>
 
-              {/* Functional Delivery Bar */}
+              {/* Functional Delivery Bar (Desktop) */}
               {userInfo && (
                 <button 
                   onClick={() => setShowLocationModal(true)}
@@ -226,7 +226,7 @@ const Navbar = () => {
                 </button>
               )}
 
-              {/* Mobile Notification & Cart */}
+              {/* Mobile Only Right Actions (When Logged In) */}
               {userInfo && (
                 <div className="flex md:hidden items-center gap-2">
                   <button className="p-2 text-slate-500 hover:text-primary transition-colors">
@@ -239,6 +239,24 @@ const Navbar = () => {
                         {cartItems.length}
                       </span>
                     )}
+                  </Link>
+                </div>
+              )}
+
+              {/* Always Visible on Mobile (When Logged Out) or Desktop Actions */}
+              {!userInfo && (
+                <div className="flex md:hidden items-center gap-3">
+                  <button 
+                    onClick={toggleDarkMode}
+                    className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-all shadow-sm"
+                  >
+                    {isDark ? <Sun size={20} /> : <Moon size={20} />}
+                  </button>
+                  <Link 
+                    to="/login" 
+                    className="bg-primary text-white px-4 py-2.5 rounded-2xl font-black text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    {t('login')}
                   </Link>
                 </div>
               )}
@@ -309,7 +327,7 @@ const Navbar = () => {
               </div>
             )}
 
-            <div className="hidden md:flex items-center gap-3 shrink-0">
+            <div className={`hidden md:flex items-center gap-3 shrink-0 ${!userInfo ? 'ml-auto' : ''}`}>
               {/* Home Icon */}
               {userInfo && (
                 <Link to="/" className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group">
@@ -420,16 +438,18 @@ const Navbar = () => {
             </div>
 
             {/* Mobile Delivery Bar */}
-            <button 
-              onClick={() => setShowLocationModal(true)}
-              className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl order-2"
-            >
-              <MapPin size={16} className="text-primary" />
-              <div className="flex items-center gap-1 text-xs font-black text-slate-700 dark:text-slate-200">
-                Deliver to <span className="text-primary">{userInfo?.city || 'Select Location'}</span>
-                <ChevronDown size={14} className="text-slate-400 ml-auto" />
-              </div>
-            </button>
+            {userInfo && (
+              <button 
+                onClick={() => setShowLocationModal(true)}
+                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl order-2"
+              >
+                <MapPin size={16} className="text-primary" />
+                <div className="flex items-center gap-1 text-xs font-black text-slate-700 dark:text-slate-200">
+                  Deliver to <span className="text-primary">{userInfo?.city || 'Select Location'}</span>
+                  <ChevronDown size={14} className="text-slate-400 ml-auto" />
+                </div>
+              </button>
+            )}
 
           </div>
         </div>
