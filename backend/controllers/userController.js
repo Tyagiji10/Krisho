@@ -269,6 +269,34 @@ export const updateUserProfile = async (req, res, next) => {
   }
 };
 
+// @desc    Delete user profile
+// @route   DELETE /api/users/profile
+// @access  Private
+export const deleteUserProfile = async (req, res, next) => {
+  try {
+    if (!isDbConnected(mongoose)) {
+      const userIndex = mockUsers.findIndex(u => u._id.toString() === req.user._id.toString());
+      if (userIndex !== -1) {
+        mockUsers.splice(userIndex, 1);
+        return res.json({ message: 'User deleted successfully (Mock Mode)' });
+      }
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    const user = await User.findById(req.user._id);
+    if (user) {
+      await user.deleteOne();
+      res.json({ message: 'User deleted successfully' });
+    } else {
+      res.status(404);
+      throw new Error('User not found');
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Update user payment details
 // @route   PUT /api/users/payment
 // @access  Private/Supplier

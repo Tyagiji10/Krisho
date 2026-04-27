@@ -96,11 +96,11 @@ const LandingPage = () => (
             Krisho empowers Indian farmers by eliminating middlemen, ensuring they get the best prices while you get the freshest produce.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link to="/marketplace" className="px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all flex items-center gap-2 shadow-xl shadow-primary/30 group">
-              Shop Now <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+            <Link to="/login" className="px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all flex items-center gap-2 shadow-xl shadow-primary/30 group">
+              Log In <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link to="/register" className="px-8 py-4 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl font-bold text-lg hover:border-primary transition-all shadow-lg">
-              Join as Supplier
+              Sign Up
             </Link>
           </div>
           <div className="flex items-center gap-6 pt-4">

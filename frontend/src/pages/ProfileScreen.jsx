@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
+import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { 
   User, 
@@ -16,6 +18,7 @@ import {
 const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
   const { userInfo } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const [notifications, setNotifications] = useState(true);
 
   const changeLanguage = (lng) => {
@@ -33,11 +36,16 @@ const ProfileScreen = () => {
   const handleDeleteAccount = async () => {
     if (window.confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) {
       try {
-        // Implement delete API call here. Using a mock logout for now.
+        const config = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
+        await axios.delete('/api/users/profile', config);
         dispatch(logout());
         window.location.href = '/';
       } catch (error) {
-        alert("Failed to delete account");
+        alert(error.response?.data?.message || "Failed to delete account");
       }
     }
   };
