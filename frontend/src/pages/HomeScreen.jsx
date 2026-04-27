@@ -81,7 +81,7 @@ const UserPortal = ({ user }) => {
 const LandingPage = () => (
   <div className="space-y-24">
     {/* Hero Section */}
-    <section className="relative py-20 overflow-hidden">
+    <section className="relative pt-8 pb-20 overflow-hidden">
       <div className="flex flex-col md:flex-row items-center gap-12">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
