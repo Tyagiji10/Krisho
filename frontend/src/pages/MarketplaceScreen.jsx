@@ -159,15 +159,27 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
           </button>
         </div>
       ) : (
-        <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "flex flex-col gap-4"}>
+        <div className={
+          isEmbedded 
+            ? "flex gap-4 md:gap-6 overflow-x-auto pb-6 pt-2 snap-x no-scrollbar -mx-4 px-4 md:mx-0 md:px-0" 
+            : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "flex flex-col gap-4")
+        }>
           {products.map((product) => (
-            <ProductCard key={product._id} product={product} viewMode={viewMode} />
+            <div key={product._id} className={isEmbedded ? "min-w-[260px] md:min-w-[300px] max-w-[260px] md:max-w-[300px] snap-start shrink-0 h-full" : ""}>
+              <ProductCard product={product} viewMode={isEmbedded ? 'grid' : viewMode} />
+            </div>
           ))}
         </div>
       )}
 
-      {/* Pagination */}
-      {pages > 1 && (
+      {/* Pagination / View All */}
+      {isEmbedded ? (
+        <div className="text-center mt-4">
+          <Link to="/marketplace" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl hover:bg-primary/10 hover:text-primary transition-all text-sm">
+            Explore All Produce <ChevronRight size={18} />
+          </Link>
+        </div>
+      ) : pages > 1 && (
         <div className="flex justify-center items-center gap-3 pt-8">
           <button 
             onClick={() => {setPage(page - 1); window.scrollTo(0, 0);}} 
