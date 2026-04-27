@@ -161,12 +161,12 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
       ) : (
         <div className={
           isEmbedded 
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 max-h-[60vh] overflow-y-auto pr-2 pb-4" 
+            ? "flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-2 pb-4" 
             : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" : "flex flex-col gap-4")
         }>
           {products.map((product) => (
             <div key={product._id} className="h-full">
-              <ProductCard product={product} viewMode={isEmbedded ? 'grid' : viewMode} />
+              <ProductCard product={product} viewMode={isEmbedded ? 'list' : viewMode} />
             </div>
           ))}
         </div>
