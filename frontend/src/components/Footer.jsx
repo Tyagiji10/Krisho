@@ -52,11 +52,11 @@ const Footer = () => {
             <ul className="space-y-2 text-[10px] md:text-sm text-slate-400">
               <li className="flex items-start gap-2">
                 <MapPin className="text-primary mt-0.5" size={14} />
-                <span>Krishi Bhavan, New Delhi, India</span>
+                <span>Muzaffarnagar, Uttar Pradesh, India</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="text-primary" size={14} />
-                <span>+91 98765 43210</span>
+                <span>+91 9999999999</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="text-primary" size={14} />
@@ -65,7 +65,7 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-[9px] md:text-xs">
           <p>© {new Date().getFullYear()} Krisho. All rights reserved.</p>
           <div className="flex gap-4 md:gap-6">
