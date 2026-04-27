@@ -1,6 +1,5 @@
-import mongoose from 'mongoose';
-import Product from '../models/Product.js';
-import { mockProducts, isDbConnected, generateId } from '../utils/mockData.js';
+import { db } from '../config/firebaseAdmin.js';
+import { mockProducts, generateId } from '../utils/mockData.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -13,89 +12,58 @@ export const getProducts = async (req, res, next) => {
     const categoryText = req.query.category || '';
     const userCity = req.query.city || '';
     const userState = req.query.state || '';
-    const hourSeed = new Date().getHours(); // For fair rotation
+    const hourSeed = new Date().getHours(); 
 
-    // Mock Mode Fallback
-    if (!isDbConnected(mongoose)) {
-      let filtered = [...mockProducts];
-      
-      if (keywordText) filtered = filtered.filter(p => p.name.toLowerCase().includes(keywordText.toLowerCase()));
-      if (categoryText) filtered = filtered.filter(p => p.category.toLowerCase() === categoryText.toLowerCase());
-      
-      // Fair & Smart Sorting Logic
-      filtered.sort((a, b) => {
-        // 1. Proximity: City
-        if (userCity) {
-          const aCity = a.city === userCity;
-          const bCity = b.city === userCity;
-          if (aCity && !bCity) return -1;
-          if (!aCity && bCity) return 1;
-        }
+    let products = [];
 
-        // 2. Proximity: State
-        if (userState) {
-          const aState = a.state === userState;
-          const bState = b.state === userState;
-          if (aState && !bState) return -1;
-          if (!aState && bState) return 1;
-        }
-
-        // 3. Fair Spotlight: Hour-based rotation using supplier ID
-        const aScore = (parseInt(a.supplier?._id?.toString().slice(-4), 16) || 0) % (hourSeed + 1);
-        const bScore = (parseInt(b.supplier?._id?.toString().slice(-4), 16) || 0) % (hourSeed + 1);
-        if (aScore !== bScore) return bScore - aScore;
-
-        // 4. Quality: Rating
-        if (a.rating !== b.rating) return b.rating - a.rating;
-
-        // 5. Value: Price
-        return a.price - b.price;
+    if (db) {
+      const snapshot = await db.collection('products').get();
+      snapshot.forEach(doc => {
+        products.push({ _id: doc.id, ...doc.data() });
       });
-      
-      const count = filtered.length;
-      const products = filtered.slice(pageSize * (page - 1), pageSize * page);
-      
-      return res.json({ products, page, pages: Math.ceil(count / pageSize), isMock: true });
+    } else {
+      products = [...mockProducts];
     }
 
-    const query = {
-      ...(keywordText ? { name: { $regex: keywordText, $options: 'i' } } : {}),
-      ...(categoryText ? { category: categoryText } : {}),
-    };
+    if (keywordText) {
+      products = products.filter(p => p.name.toLowerCase().includes(keywordText.toLowerCase()));
+    }
+    if (categoryText) {
+      products = products.filter(p => p.category.toLowerCase() === categoryText.toLowerCase());
+    }
 
-    const count = await Product.countDocuments(query);
-    let products = await Product.find(query)
-      .populate('supplier', 'name city state profileImage rating')
-      .limit(pageSize)
-      .skip(pageSize * (page - 1));
+    const count = products.length;
 
     // Dynamic Smart Sorting
     products.sort((a, b) => {
-      // Proximity
-      const aCity = a.supplier?.city === userCity;
-      const bCity = b.supplier?.city === userCity;
+      const aSupplierCity = a.supplier?.city || a.city;
+      const bSupplierCity = b.supplier?.city || b.city;
+      const aSupplierState = a.supplier?.state || a.state;
+      const bSupplierState = b.supplier?.state || b.state;
+      const aSupplierId = a.supplier?._id || a.supplier || '0';
+      const bSupplierId = b.supplier?._id || b.supplier || '0';
+
+      const aCity = aSupplierCity === userCity;
+      const bCity = bSupplierCity === userCity;
       if (aCity && !bCity) return -1;
       if (!aCity && bCity) return 1;
 
-      const aState = a.supplier?.state === userState;
-      const bState = b.supplier?.state === userState;
+      const aState = aSupplierState === userState;
+      const bState = bSupplierState === userState;
       if (aState && !bState) return -1;
       if (!aState && bState) return 1;
 
-      // Fair Spotlight (Hourly rotation)
-      const aSeed = (parseInt(a.supplier?._id?.toString().slice(-4), 16) || 0) + hourSeed;
-      const bSeed = (parseInt(b.supplier?._id?.toString().slice(-4), 16) || 0) + hourSeed;
+      const aSeed = (parseInt(aSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
+      const bSeed = (parseInt(bSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
       if (Math.sin(aSeed) > Math.sin(bSeed)) return -1;
       if (Math.sin(aSeed) < Math.sin(bSeed)) return 1;
 
-      // Rating
-      if (a.rating !== b.rating) return b.rating - a.rating;
-
-      // Price
+      if ((a.rating || 0) !== (b.rating || 0)) return (b.rating || 0) - (a.rating || 0);
       return a.price - b.price;
     });
 
-    res.json({ products, page, pages: Math.ceil(count / pageSize) });
+    const paginatedProducts = products.slice(pageSize * (page - 1), pageSize * page);
+    res.json({ products: paginatedProducts, page, pages: Math.ceil(count / pageSize), isMock: !db });
   } catch (error) {
     next(error);
   }
@@ -106,24 +74,18 @@ export const getProducts = async (req, res, next) => {
 // @access  Public
 export const getProductById = async (req, res, next) => {
   try {
-    if (!isDbConnected(mongoose)) {
-      const product = mockProducts.find(p => p._id === req.params.id);
-      if (product) {
-        return res.json(product);
-      } else {
-        res.status(404);
-        throw new Error('Product not found (Mock Mode)');
+    if (db) {
+      const doc = await db.collection('products').doc(req.params.id).get();
+      if (doc.exists) {
+        return res.json({ _id: doc.id, ...doc.data() });
       }
-    }
-
-    const product = await Product.findById(req.params.id).populate('supplier', 'name email state city');
-
-    if (product) {
-      res.json(product);
     } else {
-      res.status(404);
-      throw new Error('Product not found');
+      const product = mockProducts.find(p => p._id === req.params.id);
+      if (product) return res.json(product);
     }
+    
+    res.status(404);
+    throw new Error('Product not found');
   } catch (error) {
     next(error);
   }
@@ -134,30 +96,32 @@ export const getProductById = async (req, res, next) => {
 // @access  Private/Supplier
 export const deleteProduct = async (req, res, next) => {
   try {
-    if (!isDbConnected(mongoose)) {
+    if (db) {
+      const docRef = db.collection('products').doc(req.params.id);
+      const doc = await docRef.get();
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.supplier._id !== req.user._id.toString()) {
+          res.status(401);
+          throw new Error('User not authorized to delete this product');
+        }
+        await docRef.delete();
+        return res.json({ message: 'Product removed' });
+      }
+    } else {
       const index = mockProducts.findIndex(p => p._id === req.params.id);
       if (index !== -1) {
+        if (mockProducts[index].supplier._id !== req.user._id.toString()) {
+          res.status(401);
+          throw new Error('User not authorized');
+        }
         mockProducts.splice(index, 1);
         return res.json({ message: 'Product removed (Mock Mode)' });
-      } else {
-        res.status(404);
-        throw new Error('Product not found (Mock Mode)');
       }
     }
 
-    const product = await Product.findById(req.params.id);
-
-    if (product) {
-      if (product.supplier.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('User not authorized to delete this product');
-      }
-      await product.deleteOne();
-      res.json({ message: 'Product removed' });
-    } else {
-      res.status(404);
-      throw new Error('Product not found');
-    }
+    res.status(404);
+    throw new Error('Product not found');
   } catch (error) {
     next(error);
   }
@@ -170,45 +134,37 @@ export const createProduct = async (req, res, next) => {
   try {
     const { name, price, description, images, category, stock, unit, hashtags } = req.body;
 
-    if (!isDbConnected(mongoose)) {
-      const newProduct = {
-        _id: generateId(),
-        name,
-        price: Number(price),
-        description,
-        images,
-        category,
-        stock: Number(stock),
-        unit,
-        hashtags,
-        supplier: { 
-          _id: req.user._id, 
-          name: req.user.name, 
-          city: req.body.city || req.user.city, 
-          state: req.body.state || req.user.state 
-        },
-        city: req.body.city || req.user.city,
-        state: req.body.state || req.user.state,
-        isMock: true
-      };
-      mockProducts.push(newProduct);
-      return res.status(201).json(newProduct);
-    }
-
-    const product = new Product({
+    const newProductData = {
       name,
       price: Number(price),
-      supplier: req.user._id,
+      description,
       images,
       category,
       stock: Number(stock),
       unit,
-      description,
-      hashtags
-    });
+      hashtags,
+      supplier: { 
+        _id: req.user._id.toString(), 
+        name: req.user.name, 
+        city: req.body.city || req.user.city, 
+        state: req.body.state || req.user.state 
+      },
+      city: req.body.city || req.user.city,
+      state: req.body.state || req.user.state,
+      rating: 0,
+      numReviews: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-    const createdProduct = await product.save();
-    res.status(201).json(createdProduct);
+    if (db) {
+      const docRef = await db.collection('products').add(newProductData);
+      return res.status(201).json({ _id: docRef.id, ...newProductData });
+    } else {
+      const mockProduct = { _id: generateId(), ...newProductData, isMock: true };
+      mockProducts.push(mockProduct);
+      return res.status(201).json(mockProduct);
+    }
   } catch (error) {
     next(error);
   }
@@ -220,47 +176,43 @@ export const createProduct = async (req, res, next) => {
 export const updateProduct = async (req, res, next) => {
   try {
     const { name, price, description, images, category, stock, unit, hashtags } = req.body;
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (price) updateData.price = Number(price);
+    if (description) updateData.description = description;
+    if (images) updateData.images = images;
+    if (category) updateData.category = category;
+    if (stock) updateData.stock = Number(stock);
+    if (unit) updateData.unit = unit;
+    if (hashtags) updateData.hashtags = hashtags;
+    updateData.updatedAt = new Date().toISOString();
 
-    if (!isDbConnected(mongoose)) {
+    if (db) {
+      const docRef = db.collection('products').doc(req.params.id);
+      const doc = await docRef.get();
+      if (doc.exists) {
+        if (doc.data().supplier._id !== req.user._id.toString()) {
+          res.status(401);
+          throw new Error('User not authorized to update this product');
+        }
+        await docRef.update(updateData);
+        const updatedDoc = await docRef.get();
+        return res.json({ _id: updatedDoc.id, ...updatedDoc.data() });
+      }
+    } else {
       const product = mockProducts.find(p => p._id === req.params.id);
       if (product) {
-        product.name = name || product.name;
-        product.price = price || product.price;
-        product.description = description || product.description;
-        product.images = images || product.images;
-        product.category = category || product.category;
-        product.stock = stock || product.stock;
-        product.unit = unit || product.unit;
-        product.hashtags = hashtags || product.hashtags;
+        if (product.supplier._id !== req.user._id.toString()) {
+          res.status(401);
+          throw new Error('User not authorized to update this product');
+        }
+        Object.assign(product, updateData);
         return res.json(product);
-      } else {
-        res.status(404);
-        throw new Error('Product not found (Mock Mode)');
       }
     }
 
-    const product = await Product.findById(req.params.id);
-
-    if (product) {
-      if (product.supplier.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('User not authorized to update this product');
-      }
-      product.name = name || product.name;
-      product.price = price || product.price;
-      product.description = description || product.description;
-      product.images = images || product.images;
-      product.category = category || product.category;
-      product.stock = stock || product.stock;
-      product.unit = unit || product.unit;
-      product.hashtags = hashtags || product.hashtags;
-
-      const updatedProduct = await product.save();
-      res.json(updatedProduct);
-    } else {
-      res.status(404);
-      throw new Error('Product not found');
-    }
+    res.status(404);
+    throw new Error('Product not found');
   } catch (error) {
     next(error);
   }

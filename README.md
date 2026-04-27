@@ -40,6 +40,11 @@ Krisho is a full-stack digital marketplace designed to connect Indian farmers di
    PORT=5000
    MONGO_URI=mongodb://localhost:27017/krisho
    JWT_SECRET=your_jwt_secret
+
+   # Firebase Admin SDK (For Product Sync)
+   FIREBASE_PROJECT_ID=your_firebase_project_id
+   FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour_key\n-----END PRIVATE KEY-----\n"
    ```
 4. **Seed the Database**:
    ```bash

@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { mockOrders, isDbConnected, generateId, mockProducts, mockUsers } from '../utils/mockData.js';
+import { db } from '../config/firebaseAdmin.js';
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -24,7 +25,20 @@ export const addOrderItems = async (req, res, next) => {
     }
 
     // Verify stock before proceeding
-    if (!isDbConnected(mongoose)) {
+    if (db) {
+      for (const item of orderItems) {
+        const doc = await db.collection('products').doc(item.product).get();
+        if (!doc.exists) {
+          res.status(404);
+          throw new Error(`Product not found: ${item.name}`);
+        }
+        const productData = doc.data();
+        if (productData.stock < item.qty) {
+          res.status(400);
+          throw new Error(`Insufficient stock for ${item.name}`);
+        }
+      }
+    } else if (!isDbConnected(mongoose)) {
       for (const item of orderItems) {
         const product = mockProducts.find(p => p._id === item.product);
         if (!product || product.stock < item.qty) {
@@ -101,10 +115,21 @@ export const addOrderItems = async (req, res, next) => {
     const createdOrder = await order.save();
     
     // Reduce stock in DB
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.qty }
-      });
+    if (db) {
+      for (const item of orderItems) {
+        const docRef = db.collection('products').doc(item.product);
+        const doc = await docRef.get();
+        if (doc.exists) {
+          const currentStock = doc.data().stock;
+          await docRef.update({ stock: currentStock - item.qty });
+        }
+      }
+    } else {
+      for (const item of orderItems) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: -item.qty }
+        });
+      }
     }
 
     res.status(201).json(createdOrder);

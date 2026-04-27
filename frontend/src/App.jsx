@@ -16,8 +16,11 @@ import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 
 import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 function App() {
+  const { userInfo } = useSelector((state) => state.auth);
+
   useEffect(() => {
     const isDark = localStorage.getItem('darkMode') === 'true';
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -35,7 +38,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col bg-background dark:bg-slate-900 transition-colors duration-300 overflow-x-hidden">
       <Navbar />
-      <main className="flex-grow container mx-auto px-4 md:px-8 pt-24 md:pt-28 pb-24 md:pb-12">
+      <main className={`flex-grow container mx-auto px-4 md:px-8 pb-24 md:pb-12 ${userInfo ? 'pt-[200px] md:pt-28' : 'pt-24 md:pt-28'}`}>
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/marketplace" element={<MarketplaceScreen />} />

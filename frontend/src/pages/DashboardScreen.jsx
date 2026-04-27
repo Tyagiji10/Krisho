@@ -189,7 +189,21 @@ const DashboardScreen = () => {
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
+      let finalImageUrl = newProduct.image || 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80';
+
+      // Check if image is a base64 string (local upload)
+      if (finalImageUrl.startsWith('data:image')) {
+        const { getStorage, ref, uploadString, getDownloadURL } = await import('firebase/storage');
+        await import('../firebase.js'); // Ensure firebase is initialized
+        const storage = getStorage();
+        const imageRef = ref(storage, `products/${userInfo._id}_${Date.now()}`);
+        
+        const snapshot = await uploadString(imageRef, finalImageUrl, 'data_url');
+        finalImageUrl = await getDownloadURL(snapshot.ref);
+      }
+
       const config = { 
         headers: { Authorization: `Bearer ${userInfo.token}` },
         timeout: 15000 
@@ -199,7 +213,7 @@ const DashboardScreen = () => {
         ...newProduct,
         city: userInfo.city,
         state: userInfo.state,
-        images: [newProduct.image || 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80']
+        images: [finalImageUrl]
       };
 
       if (isEditing) {
@@ -216,6 +230,8 @@ const DashboardScreen = () => {
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Error saving product';
       alert(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
