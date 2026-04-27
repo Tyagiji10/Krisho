@@ -194,7 +194,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className={`sticky top-0 z-[60] w-full transition-all duration-300 border-b border-border/40 backdrop-blur-md ${isDark ? 'bg-slate-900/90' : 'bg-gradient-to-b from-[#F0FFF4] to-white/90'}`}>
+      <nav className={`fixed top-0 z-[60] w-full transition-all duration-300 border-b border-border/40 backdrop-blur-md ${isDark ? 'bg-slate-900/90' : 'bg-gradient-to-b from-[#F0FFF4] to-white/90'}`}>
         <div className="container mx-auto px-4 md:px-8">
           {/* Main Desktop Row */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center py-3 md:py-5 gap-4">
