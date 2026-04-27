@@ -41,6 +41,7 @@ const Navbar = () => {
   const suggestionRef = useRef(null);
   const profileRef = useRef(null);
   const notifRef = useRef(null);
+  const notifRefMobile = useRef(null);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -72,7 +73,7 @@ const Navbar = () => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
+      if (notifRef.current && !notifRef.current.contains(event.target) && (!notifRefMobile.current || !notifRefMobile.current.contains(event.target))) {
         setIsNotificationsOpen(false);
       }
     };
@@ -194,6 +195,30 @@ const Navbar = () => {
     { code: 'mr', name: 'मराठी' }
   ];
 
+  const NotificationDropdown = () => (
+    <div className="absolute right-0 mt-4 w-80 max-w-[90vw] bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-[80]">
+      <div className="p-4 border-b border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
+        <p className="font-black text-slate-900 dark:text-white">Notifications</p>
+        <button onClick={() => setIsNotificationsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+      </div>
+      <div className="divide-y divide-border dark:divide-slate-700 max-h-[300px] overflow-y-auto">
+        <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+          <p className="text-sm font-bold text-foreground dark:text-white">Welcome to Krisho! 🌱</p>
+          <p className="text-xs text-slate-500 mt-1">Start exploring fresh produce from local farmers.</p>
+        </div>
+        {userInfo?.role === 'supplier' && (
+          <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <p className="text-sm font-bold text-primary">System Update</p>
+            <p className="text-xs text-slate-500 mt-1">Your dashboard has been updated with new features.</p>
+          </div>
+        )}
+      </div>
+      <div className="p-3 border-t border-border dark:border-slate-700 text-center">
+        <button className="text-xs font-bold text-primary hover:underline">Mark all as read</button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <nav className={`fixed top-0 z-[60] w-full transition-all duration-300 border-b border-border/40 backdrop-blur-md ${isDark ? 'bg-slate-900/90' : 'bg-gradient-to-b from-[#F0FFF4] to-white/90'}`}>
@@ -237,9 +262,16 @@ const Navbar = () => {
                   >
                     {isDark ? <Sun size={20} /> : <Moon size={20} />}
                   </button>
-                  <button className="p-2 text-slate-500 hover:text-primary transition-colors">
-                    <Bell size={20} />
-                  </button>
+                  <div className="relative" ref={notifRefMobile}>
+                    <button 
+                      onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                      className="p-2 text-slate-500 hover:text-primary transition-colors relative"
+                    >
+                      <Bell size={20} />
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+                    </button>
+                    {isNotificationsOpen && <NotificationDropdown />}
+                  </div>
                 </div>
               )}
 
@@ -348,29 +380,7 @@ const Navbar = () => {
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
                   </button>
                   
-                  {isNotificationsOpen && (
-                    <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-50">
-                      <div className="p-4 border-b border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
-                        <p className="font-black text-slate-900 dark:text-white">Notifications</p>
-                        <button onClick={() => setIsNotificationsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-                      </div>
-                      <div className="divide-y divide-border dark:divide-slate-700 max-h-[300px] overflow-y-auto">
-                        <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-                          <p className="text-sm font-bold text-foreground dark:text-white">Welcome to Krisho! 🌱</p>
-                          <p className="text-xs text-slate-500 mt-1">Start exploring fresh produce from local farmers.</p>
-                        </div>
-                        {userInfo?.role === 'supplier' && (
-                          <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-                            <p className="text-sm font-bold text-primary">System Update</p>
-                            <p className="text-xs text-slate-500 mt-1">Your dashboard has been updated with new features.</p>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-3 border-t border-border dark:border-slate-700 text-center">
-                        <button className="text-xs font-bold text-primary hover:underline">Mark all as read</button>
-                      </div>
-                    </div>
-                  )}
+                  {isNotificationsOpen && <NotificationDropdown />}
                 </div>
               )}
 
