@@ -145,7 +145,7 @@ const LandingPage = () => (
     </section>
 
     {/* Stats/Features Section */}
-    <section id="about" className="bg-primary/5 dark:bg-primary/10 rounded-[4rem] p-12 md:p-20">
+    <section id="about" className="bg-primary/5 dark:bg-primary/10 rounded-[4rem] px-8 py-12 md:p-20">
       <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
         <h2 className="text-4xl font-bold text-slate-900 dark:text-white">Why Choose Krisho?</h2>
         <p className="text-slate-600 dark:text-slate-400 text-lg">We are transforming the agricultural supply chain using technology and transparency.</p>
