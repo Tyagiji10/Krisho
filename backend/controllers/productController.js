@@ -1,5 +1,4 @@
 import { db } from '../config/firebaseAdmin.js';
-import { mockProducts, generateId } from '../utils/mockData.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -14,16 +13,16 @@ export const getProducts = async (req, res, next) => {
     const userState = req.query.state || '';
     const hourSeed = new Date().getHours(); 
 
-    let products = [];
-
-    if (db) {
-      const snapshot = await db.collection('products').get();
-      snapshot.forEach(doc => {
-        products.push({ _id: doc.id, ...doc.data() });
-      });
-    } else {
-      products = [...mockProducts];
+    if (!db) {
+      res.status(500);
+      throw new Error('Firebase Database not connected');
     }
+
+    let products = [];
+    const snapshot = await db.collection('products').get();
+    snapshot.forEach(doc => {
+      products.push({ _id: doc.id, ...doc.data() });
+    });
 
     if (keywordText) {
       products = products.filter(p => p.name.toLowerCase().includes(keywordText.toLowerCase()));
@@ -63,7 +62,7 @@ export const getProducts = async (req, res, next) => {
     });
 
     const paginatedProducts = products.slice(pageSize * (page - 1), pageSize * page);
-    res.json({ products: paginatedProducts, page, pages: Math.ceil(count / pageSize), isMock: !db });
+    res.json({ products: paginatedProducts, page, pages: Math.ceil(count / pageSize) });
   } catch (error) {
     next(error);
   }
@@ -74,14 +73,9 @@ export const getProducts = async (req, res, next) => {
 // @access  Public
 export const getProductById = async (req, res, next) => {
   try {
-    if (db) {
-      const doc = await db.collection('products').doc(req.params.id).get();
-      if (doc.exists) {
-        return res.json({ _id: doc.id, ...doc.data() });
-      }
-    } else {
-      const product = mockProducts.find(p => p._id === req.params.id);
-      if (product) return res.json(product);
+    const doc = await db.collection('products').doc(req.params.id).get();
+    if (doc.exists) {
+      return res.json({ _id: doc.id, ...doc.data() });
     }
     
     res.status(404);
@@ -96,28 +90,16 @@ export const getProductById = async (req, res, next) => {
 // @access  Private/Supplier
 export const deleteProduct = async (req, res, next) => {
   try {
-    if (db) {
-      const docRef = db.collection('products').doc(req.params.id);
-      const doc = await docRef.get();
-      if (doc.exists) {
-        const data = doc.data();
-        if (data.supplier._id !== req.user._id.toString()) {
-          res.status(401);
-          throw new Error('User not authorized to delete this product');
-        }
-        await docRef.delete();
-        return res.json({ message: 'Product removed' });
+    const docRef = db.collection('products').doc(req.params.id);
+    const doc = await docRef.get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.supplier._id !== req.user._id.toString()) {
+        res.status(401);
+        throw new Error('User not authorized to delete this product');
       }
-    } else {
-      const index = mockProducts.findIndex(p => p._id === req.params.id);
-      if (index !== -1) {
-        if (mockProducts[index].supplier._id !== req.user._id.toString()) {
-          res.status(401);
-          throw new Error('User not authorized');
-        }
-        mockProducts.splice(index, 1);
-        return res.json({ message: 'Product removed (Mock Mode)' });
-      }
+      await docRef.delete();
+      return res.json({ message: 'Product removed' });
     }
 
     res.status(404);
@@ -138,11 +120,11 @@ export const createProduct = async (req, res, next) => {
       name,
       price: Number(price),
       description,
-      images,
+      images: images || [],
       category,
       stock: Number(stock),
       unit,
-      hashtags,
+      hashtags: hashtags || [],
       supplier: { 
         _id: req.user._id.toString(), 
         name: req.user.name, 
@@ -157,14 +139,8 @@ export const createProduct = async (req, res, next) => {
       updatedAt: new Date().toISOString()
     };
 
-    if (db) {
-      const docRef = await db.collection('products').add(newProductData);
-      return res.status(201).json({ _id: docRef.id, ...newProductData });
-    } else {
-      const mockProduct = { _id: generateId(), ...newProductData, isMock: true };
-      mockProducts.push(mockProduct);
-      return res.status(201).json(mockProduct);
-    }
+    const docRef = await db.collection('products').add(newProductData);
+    return res.status(201).json({ _id: docRef.id, ...newProductData });
   } catch (error) {
     next(error);
   }
@@ -187,28 +163,16 @@ export const updateProduct = async (req, res, next) => {
     if (hashtags) updateData.hashtags = hashtags;
     updateData.updatedAt = new Date().toISOString();
 
-    if (db) {
-      const docRef = db.collection('products').doc(req.params.id);
-      const doc = await docRef.get();
-      if (doc.exists) {
-        if (doc.data().supplier._id !== req.user._id.toString()) {
-          res.status(401);
-          throw new Error('User not authorized to update this product');
-        }
-        await docRef.update(updateData);
-        const updatedDoc = await docRef.get();
-        return res.json({ _id: updatedDoc.id, ...updatedDoc.data() });
+    const docRef = db.collection('products').doc(req.params.id);
+    const doc = await docRef.get();
+    if (doc.exists) {
+      if (doc.data().supplier._id !== req.user._id.toString()) {
+        res.status(401);
+        throw new Error('User not authorized to update this product');
       }
-    } else {
-      const product = mockProducts.find(p => p._id === req.params.id);
-      if (product) {
-        if (product.supplier._id !== req.user._id.toString()) {
-          res.status(401);
-          throw new Error('User not authorized to update this product');
-        }
-        Object.assign(product, updateData);
-        return res.json(product);
-      }
+      await docRef.update(updateData);
+      const updatedDoc = await docRef.get();
+      return res.json({ _id: updatedDoc.id, ...updatedDoc.data() });
     }
 
     res.status(404);

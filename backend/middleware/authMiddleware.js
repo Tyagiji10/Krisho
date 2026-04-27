@@ -1,7 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import mongoose from 'mongoose';
-import { mockUsers, isDbConnected } from '../utils/mockData.js';
+import { db } from '../config/firebaseAdmin.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -11,27 +9,24 @@ export const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      if (!isDbConnected(mongoose)) {
-        const user = mockUsers.find(u => u._id.toString() === decoded.id.toString());
-        if (user) {
-          req.user = user;
-          return next();
-        } else {
-          // Graceful fallback for mock mode if server restarted and lost in-memory user
-          req.user = { 
-            _id: decoded.id, 
-            name: 'Active Supplier', 
-            role: 'supplier',
-            city: 'Amritsar', 
-            state: 'Punjab',
-            isMock: true 
-          };
-          return next();
-        }
+      if (!db) {
+        // Emergency fallback if Firestore not connected but token is valid
+        req.user = { 
+          _id: decoded.id, 
+          name: 'Authorized User', 
+          role: 'consumer' 
+        };
+        return next();
       }
 
-      req.user = await User.findById(decoded.id).select('-password');
-      next();
+      const userDoc = await db.collection('users').doc(decoded.id).get();
+      
+      if (userDoc.exists) {
+        req.user = { _id: userDoc.id, ...userDoc.data() };
+        next();
+      } else {
+        res.status(401).json({ message: 'User not found in Firebase' });
+      }
     } catch (error) {
       console.error(error);
       res.status(401).json({ message: 'Not authorized, token failed' });

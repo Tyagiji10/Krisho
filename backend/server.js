@@ -1,9 +1,9 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import http from 'http';
+import { db } from './config/firebaseAdmin.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,16 +34,12 @@ app.use('/api/ai', aiRoutes);
 
 // Database Connection
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/krisho';
 
-mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log('✅ MongoDB Connected');
-    try {
-      mongoose.connection.collection('users').dropIndex('firebaseUid_1').catch(() => {});
-    } catch(e) {}
-  })
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+if (!db) {
+  console.log('⚠️  WARNING: Firestore DB not initialized. Check your Firebase credentials in .env');
+} else {
+  console.log('✅ Firestore Database Ready');
+}
 
 // Socket.io connection logic
 io.on('connection', (socket) => {

@@ -1,74 +1,48 @@
-import mongoose from 'mongoose';
-import User from '../models/User.js';
+import { db } from '../config/firebaseAdmin.js';
 import generateToken from '../utils/generateToken.js';
-import { mockUsers, isDbConnected, generateId } from '../utils/mockData.js';
 
 // @desc    Auth user & get token
 // @route   POST /api/users/login
 // @access  Public
 export const authUser = async (req, res, next) => {
   try {
-    const { email, password, firebaseUid } = req.body;
+    const { email, firebaseUid } = req.body;
 
-    // DB Check and Fallback
-    if (!isDbConnected(mongoose)) {
-      let user = null;
-      if (firebaseUid) {
-        user = mockUsers.find(u => u.firebaseUid === firebaseUid);
-      }
-      if (!user) {
-        user = mockUsers.find(u => u.email === email);
-      }
-
-      if (user) {
-        if (firebaseUid && !user.firebaseUid) user.firebaseUid = firebaseUid;
-        
-        return res.json({
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          city: user.city,
-          state: user.state,
-          profileImage: user.profileImage,
-          rating: user.rating || 4.5,
-          token: generateToken(user._id),
-          isMock: true
-        });
-      } else {
-        res.status(401);
-        throw new Error('User profile not found (Mock Mode)');
-      }
+    if (!db) {
+      res.status(500);
+      throw new Error('Firebase Database not connected');
     }
 
-    let user = null;
+    let userDoc = null;
     if (firebaseUid) {
-      user = await User.findOne({ firebaseUid });
-    }
-    if (!user) {
-      user = await User.findOne({ email });
+      userDoc = await db.collection('users').doc(firebaseUid).get();
     }
 
-    if (user) {
-      if (firebaseUid && !user.firebaseUid) {
-        user.firebaseUid = firebaseUid;
-        await user.save();
+    if (!userDoc || !userDoc.exists) {
+      // Try searching by email if UID doc not found (legacy or first login)
+      const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+      if (!userSnapshot.empty) {
+        userDoc = userSnapshot.docs[0];
+      }
+    }
+
+    if (userDoc && userDoc.exists) {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+      
+      // Update firebaseUid if it was missing
+      if (firebaseUid && userData.firebaseUid !== firebaseUid) {
+        await db.collection('users').doc(userId).update({ firebaseUid });
       }
       
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        city: user.city,
-        state: user.state,
-        profileImage: user.profileImage,
-        rating: user.rating || 4.5,
-        token: generateToken(user._id),
+        _id: userId,
+        ...userData,
+        token: generateToken(userId),
       });
     } else {
       res.status(401);
-      throw new Error('User profile not found in database');
+      throw new Error('User profile not found in Firebase. Please register first.');
     }
   } catch (error) {
     next(error);
@@ -80,75 +54,41 @@ export const authUser = async (req, res, next) => {
 // @access  Public
 export const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, state, city, firebaseUid } = req.body;
+    const { name, email, role, state, city, firebaseUid } = req.body;
 
-    // DB Check and Fallback
-    if (!isDbConnected(mongoose)) {
-      const userExists = mockUsers.find(u => u.email === email);
-      if (userExists) {
-        res.status(400);
-        const roleText = userExists.role === 'supplier' ? 'a Supplier' : 'a Consumer';
-        throw new Error(`This email is already registered as ${roleText} account. (Mock Mode)`);
-      }
-
-      const newUser = {
-        _id: generateId(),
-        name,
-        email,
-        password,
-        firebaseUid,
-        role,
-        state,
-        city
-      };
-      mockUsers.push(newUser);
-
-      return res.status(201).json({
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        city: newUser.city,
-        state: newUser.state,
-        profileImage: newUser.profileImage,
-        rating: newUser.rating || 4.5,
-        token: generateToken(newUser._id),
-        isMock: true
-      });
+    if (!db) {
+      res.status(500);
+      throw new Error('Firebase Database not connected');
     }
 
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
+    // Check if user exists
+    const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (!userSnapshot.empty) {
       res.status(400);
-      const roleText = userExists.role === 'supplier' ? 'a Supplier' : 'a Consumer';
-      throw new Error(`This email is already registered as ${roleText} account.`);
+      throw new Error('This email is already registered.');
     }
 
-    const user = await User.create({
+    const newUser = {
       name,
       email,
-      password,
       firebaseUid,
       role,
       state,
-      city
-    });
+      city,
+      profileImage: '',
+      rating: role === 'supplier' ? 4.5 : 0,
+      createdAt: new Date().toISOString(),
+    };
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        city: user.city,
-        state: user.state,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(400);
-      throw new Error('Invalid user data');
-    }
+    // Use firebaseUid as Document ID if available
+    const docId = firebaseUid || email;
+    await db.collection('users').doc(docId).set(newUser);
+
+    res.status(201).json({
+      _id: docId,
+      ...newUser,
+      token: generateToken(docId),
+    });
   } catch (error) {
     next(error);
   }
@@ -161,58 +101,39 @@ export const googleLogin = async (req, res, next) => {
   try {
     const { name, email, firebaseUid, photo } = req.body;
 
-    // DB Check and Fallback
-    if (!isDbConnected(mongoose)) {
-      let user = mockUsers.find(u => u.email === email);
-      if (!user) {
-        user = {
-          _id: generateId(),
-          name,
-          email,
-          firebaseUid,
-          role: 'consumer',
-          isMock: true
-        };
-        mockUsers.push(user);
-      }
-      return res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        city: user.city,
-        state: user.state,
-        token: generateToken(user._id),
-        isMock: true
-      });
+    if (!db) {
+      res.status(500);
+      throw new Error('Firebase Database not connected');
     }
 
-    let user = await User.findOne({ email });
+    let userDoc = await db.collection('users').doc(firebaseUid).get();
 
-    if (user) {
-      if (!user.firebaseUid) {
-        user.firebaseUid = firebaseUid;
-        await user.save();
-      }
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      res.json({
+        _id: firebaseUid,
+        ...userData,
+        token: generateToken(firebaseUid),
+      });
     } else {
-      user = await User.create({
+      // Create new user
+      const newUser = {
         name,
         email,
         firebaseUid,
-        profileImage: photo,
-        role: 'consumer',
+        profileImage: photo || '',
+        role: 'consumer', // Default role
+        rating: 0,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection('users').doc(firebaseUid).set(newUser);
+      
+      res.json({
+        _id: firebaseUid,
+        ...newUser,
+        token: generateToken(firebaseUid),
       });
     }
-
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      city: user.city,
-      state: user.state,
-      token: generateToken(user._id),
-    });
   } catch (error) {
     next(error);
   }
@@ -223,29 +144,12 @@ export const googleLogin = async (req, res, next) => {
 // @access  Private
 export const getUserProfile = async (req, res, next) => {
   try {
-    // Check Mock Mode
-    if (!isDbConnected(mongoose)) {
-      const user = mockUsers.find(u => u._id.toString() === req.user._id.toString());
-      if (user) {
-        return res.json(user);
-      } else {
-        res.status(404);
-        throw new Error('User not found (Mock Mode)');
-      }
-    }
+    const userDoc = await db.collection('users').doc(req.user._id).get();
 
-    const user = await User.findById(req.user._id);
-
-    if (user) {
+    if (userDoc.exists) {
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        state: user.state,
-        city: user.city,
-        profileImage: user.profileImage,
-        rating: user.rating || 4.5,
+        _id: userDoc.id,
+        ...userDoc.data(),
       });
     } else {
       res.status(404);
@@ -255,48 +159,30 @@ export const getUserProfile = async (req, res, next) => {
     next(error);
   }
 };
-// @desc    Update user profile (Onboarding)
+
+// @desc    Update user profile
 // @route   PUT /api/users/profile
 // @access  Private
 export const updateUserProfile = async (req, res, next) => {
   try {
     const { role, state, city, profileImage } = req.body;
-    
-    if (!isDbConnected(mongoose)) {
-      const user = mockUsers.find(u => u._id.toString() === req.user._id.toString());
-      if (user) {
-        user.role = role || user.role;
-        user.state = state || user.state;
-        user.city = city || user.city;
-        user.profileImage = profileImage !== undefined ? profileImage : user.profileImage;
-        if (!user.rating) user.rating = 4.5;
-        return res.json({
-          ...user,
-          token: generateToken(user._id)
-        });
-      }
-      res.status(404);
-      throw new Error('User not found');
-    }
+    const userRef = db.collection('users').doc(req.user._id);
+    const userDoc = await userRef.get();
 
-    const user = await User.findById(req.user._id);
-    if (user) {
-      user.role = role || user.role;
-      user.state = state || user.state;
-      user.city = city || user.city;
-      user.profileImage = profileImage || user.profileImage;
+    if (userDoc.exists) {
+      const updateData = {};
+      if (role) updateData.role = role;
+      if (state) updateData.state = state;
+      if (city) updateData.city = city;
+      if (profileImage !== undefined) updateData.profileImage = profileImage;
       
-      const updatedUser = await user.save();
+      await userRef.update(updateData);
+      const updatedDoc = await userRef.get();
+      
       res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        state: updatedUser.state,
-        city: updatedUser.city,
-        profileImage: updatedUser.profileImage,
-        rating: updatedUser.rating,
-        token: generateToken(updatedUser._id),
+        _id: updatedDoc.id,
+        ...updatedDoc.data(),
+        token: generateToken(updatedDoc.id),
       });
     } else {
       res.status(404);
@@ -312,24 +198,8 @@ export const updateUserProfile = async (req, res, next) => {
 // @access  Private
 export const deleteUserProfile = async (req, res, next) => {
   try {
-    if (!isDbConnected(mongoose)) {
-      const userIndex = mockUsers.findIndex(u => u._id.toString() === req.user._id.toString());
-      if (userIndex !== -1) {
-        mockUsers.splice(userIndex, 1);
-        return res.json({ message: 'User deleted successfully (Mock Mode)' });
-      }
-      res.status(404);
-      throw new Error('User not found');
-    }
-
-    const user = await User.findById(req.user._id);
-    if (user) {
-      await user.deleteOne();
-      res.json({ message: 'User deleted successfully' });
-    } else {
-      res.status(404);
-      throw new Error('User not found');
-    }
+    await db.collection('users').doc(req.user._id).delete();
+    res.json({ message: 'User deleted successfully' });
   } catch (error) {
     next(error);
   }
@@ -341,27 +211,19 @@ export const deleteUserProfile = async (req, res, next) => {
 export const updatePaymentDetails = async (req, res, next) => {
   try {
     const { upiId, bankName, accountNumber, ifscCode } = req.body;
+    const userRef = db.collection('users').doc(req.user._id);
+    const userDoc = await userRef.get();
 
-    if (!isDbConnected(mongoose)) {
-      const user = mockUsers.find(u => u._id.toString() === req.user._id.toString());
-      if (user) {
-        user.paymentDetails = { upiId, bankName, accountNumber, ifscCode };
-        return res.json(user);
-      }
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (user) {
-      user.paymentDetails = {
-        upiId: upiId || user.paymentDetails?.upiId,
-        bankName: bankName || user.paymentDetails?.bankName,
-        accountNumber: accountNumber || user.paymentDetails?.accountNumber,
-        ifscCode: ifscCode || user.paymentDetails?.ifscCode,
+    if (userDoc.exists) {
+      const paymentDetails = {
+        upiId: upiId || '',
+        bankName: bankName || '',
+        accountNumber: accountNumber || '',
+        ifscCode: ifscCode || '',
       };
-
-      const updatedUser = await user.save();
-      res.json(updatedUser);
+      await userRef.update({ paymentDetails });
+      const updatedDoc = await userRef.get();
+      res.json(updatedDoc.data());
     } else {
       res.status(404);
       throw new Error('User not found');
