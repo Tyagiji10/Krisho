@@ -277,23 +277,17 @@ const Navbar = () => {
                     onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
                     className="w-full bg-transparent py-3.5 pl-12 pr-[120px] outline-none transition-all text-base font-medium text-slate-800 dark:text-slate-200"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-4 text-slate-700 dark:text-slate-300">
-                    <button type="button" className="hover:text-primary transition-colors">
-                      <Camera size={22} strokeWidth={2} />
-                    </button>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-700 dark:text-slate-300">
                     <button 
                       type="button" 
                       onClick={startListening} 
-                      className={`hover:text-primary transition-all ${
+                      className={`hover:text-primary transition-all p-1.5 rounded-full ${
                         isListening 
-                          ? 'text-primary animate-pulse' 
-                          : ''
+                          ? 'text-primary bg-primary/10 animate-pulse' 
+                          : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                     >
                       <Mic size={22} strokeWidth={2} className={isListening ? 'animate-bounce' : ''} />
-                    </button>
-                    <button type="button" className="hover:text-primary transition-colors">
-                      <ScanLine size={22} strokeWidth={2} />
                     </button>
                   </div>
                 </form>
