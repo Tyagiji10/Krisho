@@ -264,7 +264,7 @@ const Navbar = () => {
 
             {/* Functional Search Bar with Suggestions & Voice */}
             {userInfo && (
-              <div className="relative flex-grow max-w-2xl mx-auto w-full order-3 md:order-none" ref={suggestionRef}>
+              <div className="relative flex-grow max-w-2xl mx-auto w-full order-2 md:order-none" ref={suggestionRef}>
                 <form onSubmit={handleSearch} className="relative group shadow-sm rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 overflow-hidden">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 transition-colors">
                     <Search size={22} strokeWidth={2} />
@@ -439,7 +439,7 @@ const Navbar = () => {
             {userInfo && (
               <button 
                 onClick={() => setShowLocationModal(true)}
-                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl order-2"
+                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl order-3"
               >
                 <MapPin size={16} className="text-primary" />
                 <div className="flex items-center gap-1 text-xs font-black text-slate-700 dark:text-slate-200">
