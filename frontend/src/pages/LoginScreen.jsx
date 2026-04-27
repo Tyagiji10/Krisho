@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
-import { LogIn, Mail, Lock, AlertCircle, User, MapPin, ChevronDown } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, User, MapPin, ChevronDown, CheckCircle2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { indianStates, topCitiesByState } from '../utils/indiaData';
 
@@ -14,6 +14,10 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [resetError, setResetError] = useState('');
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -46,6 +50,24 @@ const LoginScreen = () => {
         message = 'Invalid email or password.';
       }
       setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    setResetSuccess('');
+    setIsLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSuccess('Password reset link sent to your email!');
+      setTimeout(() => setShowResetModal(false), 3000);
+    } catch (err) {
+      setResetError(err.message.includes('auth/user-not-found') 
+        ? 'No account found with this email.' 
+        : 'Failed to send reset email. Try again.');
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +115,7 @@ const LoginScreen = () => {
           Authorization: `Bearer ${userInfo.token}`
         }
       };
-      const { data } = await axios.put('http://localhost:5000/api/users/profile', onboardingData, config);
+      const { data } = await axios.put('/api/users/profile', onboardingData, config);
       dispatch(setCredentials({ ...data }));
       setShowOnboarding(false);
       navigate('/');
@@ -194,7 +216,71 @@ const LoginScreen = () => {
             </motion.div>
           </div>
         )}
+
+        {showResetModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] p-6 md:p-10 shadow-2xl border border-border dark:border-slate-700 relative"
+            >
+              <button 
+                onClick={() => setShowResetModal(false)}
+                className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="text-center mb-8">
+                <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 text-primary">
+                  <Lock size={24} />
+                </div>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Reset Password</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 px-4">We'll send a recovery link to your email</p>
+              </div>
+
+              {resetSuccess ? (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl flex flex-col items-center gap-3 border border-emerald-100 dark:border-emerald-500/20 text-center animate-in fade-in zoom-in duration-300">
+                  <CheckCircle2 size={32} />
+                  <p className="text-sm font-bold">{resetSuccess}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  {resetError && (
+                    <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 p-3 rounded-xl flex items-start gap-2.5 border border-red-100 dark:border-red-500/20">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                      <span className="text-xs font-medium">{resetError}</span>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 ml-1 uppercase">Your Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input
+                        type="email"
+                        required
+                        className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary outline-none dark:text-white"
+                        placeholder="example@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-4 bg-primary text-white rounded-2xl font-black hover:bg-primary-dark transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -232,7 +318,16 @@ const LoginScreen = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] md:text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Password</label>
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] md:text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Password</label>
+              <button 
+                type="button"
+                onClick={() => setShowResetModal(true)}
+                className="text-[10px] md:text-xs font-bold text-primary hover:underline transition-all"
+              >
+                Forgot Password?
+              </button>
+            </div>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
               <input

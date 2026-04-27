@@ -1,4 +1,5 @@
 import { db } from '../config/firebaseAdmin.js';
+import cache from '../utils/cache.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -18,11 +19,19 @@ export const getProducts = async (req, res, next) => {
       throw new Error('Firebase Database not connected');
     }
 
-    let products = [];
-    const snapshot = await db.collection('products').get();
-    snapshot.forEach(doc => {
-      products.push({ _id: doc.id, ...doc.data() });
-    });
+    let products = cache.get('all_products');
+
+    if (!products) {
+      console.log('🔄 Cache Miss: Fetching products from Firestore...');
+      products = [];
+      const snapshot = await db.collection('products').get();
+      snapshot.forEach(doc => {
+        products.push({ _id: doc.id, ...doc.data() });
+      });
+      cache.set('all_products', products);
+    } else {
+      console.log('⚡ Cache Hit: Serving products from memory');
+    }
 
     if (keywordText) {
       products = products.filter(p => p.name.toLowerCase().includes(keywordText.toLowerCase()));
@@ -73,9 +82,18 @@ export const getProducts = async (req, res, next) => {
 // @access  Public
 export const getProductById = async (req, res, next) => {
   try {
+    const cacheKey = `product_${req.params.id}`;
+    let product = cache.get(cacheKey);
+
+    if (product) {
+      return res.json(product);
+    }
+
     const doc = await db.collection('products').doc(req.params.id).get();
     if (doc.exists) {
-      return res.json({ _id: doc.id, ...doc.data() });
+      product = { _id: doc.id, ...doc.data() };
+      cache.set(cacheKey, product);
+      return res.json(product);
     }
     
     res.status(404);
@@ -99,6 +117,11 @@ export const deleteProduct = async (req, res, next) => {
         throw new Error('User not authorized to delete this product');
       }
       await docRef.delete();
+      
+      // Invalidate cache
+      cache.del('all_products');
+      cache.del(`product_${req.params.id}`);
+      
       return res.json({ message: 'Product removed' });
     }
 
@@ -140,6 +163,10 @@ export const createProduct = async (req, res, next) => {
     };
 
     const docRef = await db.collection('products').add(newProductData);
+    
+    // Invalidate cache
+    cache.del('all_products');
+    
     return res.status(201).json({ _id: docRef.id, ...newProductData });
   } catch (error) {
     next(error);
@@ -171,6 +198,11 @@ export const updateProduct = async (req, res, next) => {
         throw new Error('User not authorized to update this product');
       }
       await docRef.update(updateData);
+      
+      // Invalidate cache
+      cache.del('all_products');
+      cache.del(`product_${req.params.id}`);
+      
       const updatedDoc = await docRef.get();
       return res.json({ _id: updatedDoc.id, ...updatedDoc.data() });
     }

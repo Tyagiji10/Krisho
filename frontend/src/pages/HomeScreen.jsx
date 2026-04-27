@@ -87,15 +87,15 @@ const LandingPage = () => (
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="flex-1 space-y-8"
+          className="flex-1 space-y-8 flex flex-col items-center text-center md:items-start md:text-left"
         >
-          <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.1] text-slate-900 dark:text-white">
+          <h1 className="text-[2.75rem] md:text-7xl font-extrabold leading-[1.1] text-slate-900 dark:text-white">
             Direct from <span className="text-primary italic">Farm</span> to your <span className="text-secondary">Home</span>.
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
+          <p className="text-base md:text-xl text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed mx-auto md:mx-0">
             Krisho empowers Indian farmers by eliminating middlemen, ensuring they get the best prices while you get the freshest produce.
           </p>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 justify-center md:justify-start">
             <Link to="/login" className="px-8 py-4 bg-primary text-white rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all flex items-center gap-2 shadow-xl shadow-primary/30 group">
               Log In <ArrowRight className="group-hover:translate-x-1 transition-transform" />
             </Link>
@@ -103,7 +103,7 @@ const LandingPage = () => (
               Sign Up
             </Link>
           </div>
-          <div className="flex items-center gap-6 pt-4">
+          <div className="flex items-center justify-center md:justify-start gap-6 pt-4">
             <div className="flex -space-x-4">
               {[1, 2, 3, 4].map((i) => (
                 <img 
@@ -147,22 +147,24 @@ const LandingPage = () => (
     {/* Stats/Features Section */}
     <section id="about" className="bg-primary/5 dark:bg-primary/10 rounded-[4rem] px-6 py-12 md:p-20">
       <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-        <h2 className="text-4xl font-bold text-slate-900 dark:text-white">Why Choose Krisho?</h2>
-        <p className="text-slate-600 dark:text-slate-400 text-lg">We are transforming the agricultural supply chain using technology and transparency.</p>
+        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Why Choose Krisho?</h2>
+        <p className="text-base md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">We are transforming the agricultural supply chain using technology and transparency.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {[
-          { icon: <ShieldCheck size={32} />, title: "Quality Assured", desc: "Every product is verified and sourced directly from registered farmers.", color: "text-blue-600", bg: "bg-blue-100" },
-          { icon: <TrendingUp size={32} />, title: "Fair Pricing", desc: "No middlemen means better prices for farmers and savings for consumers.", color: "text-green-600", bg: "bg-green-100" },
-          { icon: <Users size={32} />, title: "Community Driven", desc: "Supporting local economies and small-scale farmers across diverse regions.", color: "text-orange-600", bg: "bg-orange-100" }
+          { icon: <ShieldCheck size={40} />, title: "Quality Assured", desc: "Every product is verified and sourced directly from registered farmers.", color: "text-blue-600", bg: "bg-blue-100" },
+          { icon: <TrendingUp size={40} />, title: "Fair Pricing", desc: "No middlemen means better prices for farmers and savings for consumers.", color: "text-green-600", bg: "bg-green-100" },
+          { icon: <Users size={40} />, title: "Community Driven", desc: "Supporting local economies and small-scale farmers across diverse regions.", color: "text-orange-600", bg: "bg-orange-100" }
         ].map((feature, idx) => (
-          <motion.div key={idx} whileHover={{ y: -10 }} className="bg-white dark:bg-slate-800 p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all border border-border dark:border-slate-700">
-            <div className={`${feature.bg} ${feature.color} w-16 h-16 rounded-2xl flex items-center justify-center mb-8`}>
+          <motion.div key={idx} whileHover={{ y: -10 }} className="bg-white dark:bg-slate-800 p-8 md:p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all border border-border dark:border-slate-700 flex items-start gap-6">
+            <div className={`${feature.bg} ${feature.color} w-20 h-20 rounded-2xl flex items-center justify-center shrink-0`}>
               {feature.icon}
             </div>
-            <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">{feature.title}</h3>
-            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{feature.desc}</p>
+            <div className="space-y-2">
+              <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">{feature.title}</h3>
+              <p className="text-sm md:text-base text-slate-600 dark:text-slate-400 leading-relaxed">{feature.desc}</p>
+            </div>
           </motion.div>
         ))}
       </div>

@@ -50,7 +50,7 @@ const CartScreen = () => {
         totalPrice: subtotal + deliveryFee,
       };
 
-      await axios.post('http://localhost:5000/api/orders', orderData, config);
+      await axios.post('/api/orders', orderData, config);
       dispatch(clearCartItems());
       alert('Order Placed Successfully! Supplier has been notified.');
       navigate('/dashboard'); // Supplier can see orders, or if consumer, redirect to home

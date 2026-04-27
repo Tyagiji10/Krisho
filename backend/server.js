@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import compression from 'compression';
 import { Server } from 'socket.io';
 import http from 'http';
 import { db } from './config/firebaseAdmin.js';
@@ -18,9 +19,22 @@ const io = new Server(server, {
 });
 
 // Middleware
+app.use(compression()); // Compress all responses
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Caching Middleware for API
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET') {
+    // Cache for 1 minute for public API reads
+    res.set('Cache-Control', 'public, max-age=60');
+  } else {
+    // No cache for POST, PUT, DELETE
+    res.set('Cache-Control', 'no-store');
+  }
+  next();
+});
 
 // Routes
 import userRoutes from './routes/userRoutes.js';
@@ -80,11 +94,4 @@ app.use((err, req, res, next) => {
 // Start Server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  
-  // Check DB connection status after a delay
-  setTimeout(() => {
-    if (mongoose.connection.readyState !== 1) {
-      console.log('⚠️  WARNING: MongoDB not connected. System will use Mock Data for testing.');
-    }
-  }, 5000);
 });
