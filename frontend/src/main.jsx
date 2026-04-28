@@ -8,6 +8,7 @@ import './index.css'
 import axios from 'axios'
 import API_URL from './config'
 import './i18n'
+import { ToastProvider } from './components/ToastProvider'
 
 // Centralized API Configuration
 axios.defaults.baseURL = API_URL;
@@ -16,7 +17,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>,

@@ -43,10 +43,14 @@ import userRoutes from './routes/userRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Database Connection
 const PORT = process.env.PORT || 5000;
@@ -96,7 +100,7 @@ app.use((err, req, res, next) => {
 // Start Server
 if (!process.env.VERCEL) {
   const __dirname = path.resolve();
-  
+
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'frontend/dist')));
 

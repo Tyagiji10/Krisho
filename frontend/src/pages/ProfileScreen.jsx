@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logout, setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../components/ToastProvider';
 import { 
   User, 
   Mail, 
@@ -28,6 +29,7 @@ const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
   const { userInfo } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const toast = useToast();
   const [notifications, setNotifications] = useState(true);
 
   const [imageSrc, setImageSrc] = useState(null);
@@ -65,7 +67,7 @@ const ProfileScreen = () => {
         dispatch(logout());
         window.location.href = '/';
       } catch (error) {
-        alert(error.response?.data?.message || "Failed to delete account");
+        toast.error(error.response?.data?.message || 'Failed to delete account');
       }
     }
   };
@@ -130,12 +132,13 @@ const ProfileScreen = () => {
       };
       const { data } = await axios.put('/api/users/profile', { profileImage: compressedImage }, config);
       dispatch(setCredentials(data));
+      toast.success('Profile photo updated!');
       
       setIsCropping(false);
       setImageSrc(null);
     } catch (e) {
       console.error(e);
-      alert(`Upload Failed: ${e.response?.data?.message || e.message}`);
+      toast.error(`Upload failed: ${e.response?.data?.message || e.message}`);
       setIsCropping(false);
       setImageSrc(null);
     } finally {
@@ -151,9 +154,10 @@ const ProfileScreen = () => {
         };
         const { data } = await axios.put('/api/users/profile', { profileImage: '' }, config);
         dispatch(setCredentials(data));
+        toast.success('Profile photo removed.');
       } catch (e) {
         console.error(e);
-        alert('Failed to remove image');
+        toast.error('Failed to remove image');
       }
     }
   };

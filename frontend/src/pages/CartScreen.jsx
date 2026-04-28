@@ -4,12 +4,14 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MapPin, CreditCard } from
 import { addToCart, removeFromCart, clearCartItems } from '../store/slices/cartSlice';
 import axios from 'axios';
 import { useState } from 'react';
+import { useToast } from '../components/ToastProvider';
 
 const CartScreen = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { cartItems } = useSelector((state) => state.cart);
   const { userInfo } = useSelector((state) => state.auth);
+  const toast = useToast();
   
   const [isPlacing, setIsPlacing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -36,26 +38,98 @@ const CartScreen = () => {
     setIsPlacing(true);
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const orderData = {
-        orderItems: cartItems,
-        shippingAddress: {
-          city: userInfo.city,
-          state: userInfo.state,
-          address: 'Default registered address'
+      
+      // Calculate splits per supplier
+      const splitsMap = {};
+      cartItems.forEach(item => {
+        const supplierId = typeof item.supplier === 'object' ? item.supplier._id : item.supplier;
+        if (!splitsMap[supplierId]) splitsMap[supplierId] = 0;
+        splitsMap[supplierId] += (item.qty * item.price);
+      });
+      const splits = Object.keys(splitsMap).map(supplierId => ({
+        supplierId,
+        amount: splitsMap[supplierId]
+      }));
+
+      // 1. Create Razorpay Order
+      const { data: paymentOrder } = await axios.post('/api/payment/create-order', {
+        amount: subtotal + deliveryFee,
+        splits
+      }, config);
+
+      if (paymentOrder.mock) {
+        toast.error('Real Razorpay API Keys are required in your backend .env to display the Checkout Pop-up.');
+        setIsPlacing(false);
+        return;
+      }
+
+      // Fetch the public key from the backend config endpoint
+      const { data: clientId } = await axios.get('/api/payment/config', config);
+
+      // 2. Open Razorpay Checkout Modal
+      const options = {
+        key: clientId,
+        amount: (subtotal + deliveryFee) * 100,
+        currency: "INR",
+        name: "Krisho Marketplace",
+        description: "Secure Agri-Checkout",
+        order_id: paymentOrder.id,
+        handler: async function (response) {
+          try {
+            // 3. Verify Payment
+            await axios.post('/api/payment/verify', {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            }, config);
+
+            // 4. Place Order
+            const orderData = {
+              orderItems: cartItems,
+              shippingAddress: {
+                city: userInfo.city,
+                state: userInfo.state,
+                address: userInfo.customAddress || 'Default registered address',
+              },
+              paymentMethod: 'Razorpay',
+              itemsPrice: subtotal,
+              taxPrice: 0,
+              shippingPrice: deliveryFee,
+              totalPrice: subtotal + deliveryFee,
+            };
+
+            await axios.post('/api/orders', orderData, config);
+            dispatch(clearCartItems());
+            toast.success('Payment Successful! Order placed securely. 💳');
+            navigate('/orders');
+          } catch (verificationError) {
+            toast.error('Payment Verification Failed!');
+            setIsPlacing(false);
+          }
         },
-        paymentMethod: 'UPI / Wallet',
-        itemsPrice: subtotal,
-        taxPrice: 0,
-        shippingPrice: deliveryFee,
-        totalPrice: subtotal + deliveryFee,
+        prefill: {
+          name: userInfo.name,
+          email: userInfo.email,
+        },
+        theme: {
+          color: "#22c55e" // Tailwind primary green
+        },
+        modal: {
+          ondismiss: function() {
+            setIsPlacing(false);
+            toast.error('Payment cancelled by user');
+          }
+        }
       };
 
-      await axios.post('/api/orders', orderData, config);
-      dispatch(clearCartItems());
-      alert('Order Placed Successfully! Supplier has been notified.');
-      navigate('/dashboard'); // Supplier can see orders, or if consumer, redirect to home
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        toast.error(response.error.description || 'Payment Failed');
+        setIsPlacing(false);
+      });
+      rzp.open();
     } catch (error) {
-      alert('Order failed: ' + (error.response?.data?.message || error.message));
+      toast.error('Payment failed: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsPlacing(false);
     }
@@ -113,24 +187,6 @@ const CartScreen = () => {
           <div className="space-y-4">
             <div className="bg-card dark:bg-slate-800 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-border shadow-xl space-y-6">
               <div className="space-y-3">
-                {showPayment && (
-                  <div className="bg-primary/5 dark:bg-primary/10 p-4 rounded-[1.5rem] border border-primary/20 animate-in fade-in zoom-in duration-300">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="bg-primary text-white p-1.5 rounded-lg">
-                        <CreditCard size={14} />
-                      </div>
-                      <h3 className="font-black text-[10px] text-foreground dark:text-white uppercase tracking-wider">Direct UPI Payment</h3>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Pay directly to the farmer:</p>
-                      <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-border flex justify-between items-center">
-                        <span className="font-mono text-xs dark:text-white">{cartItems[0]?.supplier?.upiId || 'farmer@upi'}</span>
-                        <button className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-black uppercase" onClick={() => navigator.clipboard.writeText(cartItems[0]?.supplier?.upiId || 'farmer@upi')}>Copy</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
                 <div className="flex justify-between text-slate-500 dark:text-slate-400 font-bold text-xs md:text-base">
                   <span>Subtotal</span>
                   <span>₹{subtotal}</span>
@@ -146,36 +202,52 @@ const CartScreen = () => {
                 </div>
               </div>
 
+              {/* Dynamic Address Selection */}
               {userInfo && (
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-border dark:border-slate-700 flex items-start gap-2">
-                  <MapPin className="text-primary mt-0.5" size={14} />
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase">Shipping to</p>
-                    <p className="text-xs font-bold dark:text-white">{userInfo.city}, {userInfo.state}</p>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-border dark:border-slate-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="text-primary mt-0.5" size={16} />
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase">Shipping Address</p>
+                        <p className="text-xs font-bold dark:text-white">{userInfo.city}, {userInfo.state}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowPayment(!showPayment)} 
+                      className="text-xs text-primary font-bold"
+                    >
+                      {showPayment ? 'Use Default' : 'Edit'}
+                    </button>
                   </div>
+                  
+                  {showPayment && (
+                    <input 
+                      type="text" 
+                      placeholder="Enter full custom delivery address..."
+                      className="w-full px-3 py-2.5 rounded-xl text-xs bg-white dark:bg-slate-800 border border-border dark:border-slate-700 outline-none focus:border-primary dark:text-white"
+                      value={userInfo.customAddress || ''}
+                      onChange={(e) => {
+                        // Set local state for order processing
+                        userInfo.customAddress = e.target.value;
+                      }}
+                    />
+                  )}
                 </div>
               )}
 
-              {showPayment ? (
-                <button 
-                  onClick={checkoutHandler}
-                  disabled={isPlacing}
-                  className="w-full bg-primary text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 text-sm"
-                >
-                  {isPlacing ? 'Processing...' : <>Confirm & Place Order <ArrowRight size={16}/></>}
-                </button>
-              ) : (
-                <button 
-                  onClick={() => setShowPayment(true)}
-                  className="w-full bg-primary text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm"
-                >
-                  Proceed to Payment <ArrowRight size={16}/>
-                </button>
-              )}
+              {/* Razorpay Mock Flow */}
+              <button 
+                onClick={checkoutHandler}
+                disabled={isPlacing}
+                className="w-full bg-primary text-white py-4 rounded-xl font-black flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 text-sm"
+              >
+                {isPlacing ? 'Processing Payment...' : <>Proceed to Secure Checkout <ArrowRight size={16}/></>}
+              </button>
             </div>
             
-            <p className="text-center text-[10px] text-slate-400 font-bold px-4">
-              By placing order, you agree to Krisho's terms of service and direct farmer-to-consumer trade policy.
+            <p className="text-center text-[10px] text-slate-400 font-bold px-4 flex items-center justify-center gap-1">
+              <CreditCard size={12} /> Secured by Razorpay payment integration fallback.
             </p>
           </div>
         </div>

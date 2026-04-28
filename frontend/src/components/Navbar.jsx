@@ -57,6 +57,42 @@ const Navbar = () => {
   const { userInfo } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
 
+  const [notifications, setNotifications] = useState([
+    { id: 'welcome', title: 'Welcome to Krisho! 🌱', text: 'Start exploring fresh produce from local farmers.', type: 'welcome' }
+  ]);
+
+  useEffect(() => {
+    if (userInfo?.role === 'supplier') {
+      const fetchOrdersForNotifications = async () => {
+        try {
+          const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+          const { data } = await axios.get('/api/orders/supplier', config);
+          
+          const orderNotifs = data.map(order => ({
+            id: order._id,
+            title: `📦 New Order #${order._id.slice(-6)}`,
+            text: `Received order for ${order.orderItems[0].name} (Qty: ${order.orderItems[0].qty} ${order.orderItems[0].unit || 'kg'}) - ₹${order.totalPrice}`,
+            time: new Date(order.createdAt),
+            type: 'order'
+          }));
+
+          orderNotifs.sort((a, b) => b.time - a.time);
+          
+          setNotifications(prev => {
+            const welcome = prev.filter(n => n.type === 'welcome');
+            return [...welcome, ...orderNotifs];
+          });
+        } catch (err) {
+          console.error("Error fetching orders for notifications", err);
+        }
+      };
+
+      fetchOrdersForNotifications();
+      const interval = setInterval(fetchOrdersForNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [userInfo]);
+
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains('dark'));
@@ -117,6 +153,25 @@ const Navbar = () => {
       document.documentElement.classList.remove('dark');
     }
   };
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const { data } = await axios.get(`/api/products?keyword=${searchQuery}`);
+        setSuggestions(data.products.slice(0, 5));
+        setShowSuggestions(true);
+      } catch (err) {
+        console.error("Failed to fetch suggestions", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleSearch = (e) => {
     e?.preventDefault();
@@ -209,16 +264,12 @@ const Navbar = () => {
         <button onClick={() => setIsNotificationsOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
       </div>
       <div className="divide-y divide-border dark:divide-slate-700 max-h-[300px] overflow-y-auto">
-        <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-          <p className="text-sm font-bold text-foreground dark:text-white">Welcome to Krisho! 🌱</p>
-          <p className="text-xs text-slate-500 mt-1">Start exploring fresh produce from local farmers.</p>
-        </div>
-        {userInfo?.role === 'supplier' && (
-          <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-            <p className="text-sm font-bold text-primary">System Update</p>
-            <p className="text-xs text-slate-500 mt-1">Your dashboard has been updated with new features.</p>
+        {notifications.map((notif) => (
+          <div key={notif.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <p className={`text-sm font-bold ${notif.type === 'order' ? 'text-primary' : 'text-foreground dark:text-white'}`}>{notif.title}</p>
+            <p className="text-xs text-slate-500 mt-1">{notif.text}</p>
           </div>
-        )}
+        ))}
       </div>
       <div className="p-3 border-t border-border dark:border-slate-700 text-center">
         <button className="text-xs font-bold text-primary hover:underline">Mark all as read</button>
@@ -302,7 +353,7 @@ const Navbar = () => {
             </div>
 
             {/* Functional Search Bar with Suggestions & Voice */}
-            {userInfo && (
+            {userInfo && userInfo.role !== 'supplier' && (
               <div className="relative flex-grow max-w-2xl mx-auto w-full order-2 md:order-none" ref={suggestionRef}>
                 <form onSubmit={handleSearch} className="relative group shadow-sm rounded-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 overflow-hidden">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 transition-colors">
@@ -314,6 +365,9 @@ const Navbar = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="w-full bg-transparent py-3.5 pl-12 pr-[120px] outline-none transition-all text-base font-medium text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-700 dark:text-slate-300">
@@ -360,7 +414,7 @@ const Navbar = () => {
               </div>
             )}
 
-            <div className={`hidden md:flex items-center gap-3 shrink-0 ${!userInfo ? 'ml-auto' : ''}`}>
+            <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
               {/* Home Icon */}
               {userInfo && (
                 <Link to="/" className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group">
@@ -369,13 +423,7 @@ const Navbar = () => {
                 </Link>
               )}
 
-              {/* Dashboard Icon (Suppliers Only) */}
-              {userInfo?.role === 'supplier' && (
-                <Link to="/dashboard" className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group">
-                  <LayoutDashboard size={20} />
-                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Dashboard</span>
-                </Link>
-              )}
+
 
               {userInfo && (
                 <div className="relative" ref={notifRef}>
@@ -430,11 +478,7 @@ const Navbar = () => {
                         <Link to="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-sm">
                           <PackageCheck size={18} /> Order History
                         </Link>
-                        {userInfo?.role === 'supplier' && (
-                          <Link to="/dashboard" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-sm">
-                            <LayoutDashboard size={18} /> Admin Dashboard
-                          </Link>
-                        )}
+
                         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-all font-bold text-sm">
                           <LogOut size={18} /> Logout Session
                         </button>

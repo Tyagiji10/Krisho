@@ -1,5 +1,6 @@
 import { db } from '../config/firebaseAdmin.js';
 import cache from '../utils/cache.js';
+import { getMultilingualKeywords } from '../utils/gemini.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -12,7 +13,10 @@ export const getProducts = async (req, res, next) => {
     const categoryText = req.query.category || '';
     const userCity = req.query.city || '';
     const userState = req.query.state || '';
-    const hourSeed = new Date().getHours(); 
+    const hourSeed = new Date().getHours();
+    const minPrice = req.query.minPrice ? Number(req.query.minPrice) : null;
+    const maxPrice = req.query.maxPrice ? Number(req.query.maxPrice) : null;
+    const sortBy = req.query.sortBy || 'smart'; // 'smart' | 'price_asc' | 'price_desc' | 'newest' | 'rating'
 
     if (!db) {
       res.status(500);
@@ -34,6 +38,8 @@ export const getProducts = async (req, res, next) => {
     }
 
     if (keywordText) {
+      const expandedKeywords = await getMultilingualKeywords(keywordText);
+      
       const getStringSimilarity = (str1, str2) => {
         const s1 = str1.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, '');
         const s2 = str2.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, '');
@@ -63,54 +69,71 @@ export const getProducts = async (req, res, next) => {
 
       products = products.filter(p => {
         const prodName = p.name.toLowerCase();
-        const key = keywordText.toLowerCase();
-        
-        if (prodName.includes(key) || key.includes(prodName)) return true;
-        
-        // Apply Dice coefficient threshold of 70%
-        if (getStringSimilarity(p.name, keywordText) >= 0.70) return true;
+        const hashtags = (p.hashtags || []).map(h => h.toLowerCase());
 
-        const prodWords = prodName.split(/\s+/);
-        const keyWords = key.split(/\s+/);
-        
-        return prodWords.some(pw => 
-          keyWords.some(kw => kw.length > 1 && (pw.includes(kw) || kw.includes(pw)))
-        );
+        return expandedKeywords.some(key => {
+          if (prodName.includes(key) || key.includes(prodName)) return true;
+          if (hashtags.some(h => h.includes(key) || key.includes(h))) return true;
+
+          if (getStringSimilarity(p.name, key) >= 0.70) return true;
+
+          const prodWords = prodName.split(/\s+/);
+          const keyWords = key.split(/\s+/);
+
+          return prodWords.some(pw => 
+            keyWords.some(kw => kw.length > 1 && (pw.includes(kw) || kw.includes(pw)))
+          );
+        });
       });
     }
     if (categoryText) {
       products = products.filter(p => p.category.toLowerCase() === categoryText.toLowerCase());
     }
 
+    // Price range filter
+    if (minPrice !== null) products = products.filter(p => p.price >= minPrice);
+    if (maxPrice !== null) products = products.filter(p => p.price <= maxPrice);
+
     const count = products.length;
 
-    // Dynamic Smart Sorting
-    products.sort((a, b) => {
-      const aSupplierCity = a.supplier?.city || a.city;
-      const bSupplierCity = b.supplier?.city || b.city;
-      const aSupplierState = a.supplier?.state || a.state;
-      const bSupplierState = b.supplier?.state || b.state;
-      const aSupplierId = a.supplier?._id || a.supplier || '0';
-      const bSupplierId = b.supplier?._id || b.supplier || '0';
+    // Sorting
+    if (sortBy === 'price_asc') {
+      products.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price_desc') {
+      products.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'newest') {
+      products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    } else if (sortBy === 'rating') {
+      products.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else {
+      // Smart sort (default: proximity + randomized)
+      products.sort((a, b) => {
+        const aSupplierCity = a.supplier?.city || a.city;
+        const bSupplierCity = b.supplier?.city || b.city;
+        const aSupplierState = a.supplier?.state || a.state;
+        const bSupplierState = b.supplier?.state || b.state;
+        const aSupplierId = a.supplier?._id || a.supplier || '0';
+        const bSupplierId = b.supplier?._id || b.supplier || '0';
 
-      const aCity = aSupplierCity === userCity;
-      const bCity = bSupplierCity === userCity;
-      if (aCity && !bCity) return -1;
-      if (!aCity && bCity) return 1;
+        const aCity = aSupplierCity === userCity;
+        const bCity = bSupplierCity === userCity;
+        if (aCity && !bCity) return -1;
+        if (!aCity && bCity) return 1;
 
-      const aState = aSupplierState === userState;
-      const bState = bSupplierState === userState;
-      if (aState && !bState) return -1;
-      if (!aState && bState) return 1;
+        const aState = aSupplierState === userState;
+        const bState = bSupplierState === userState;
+        if (aState && !bState) return -1;
+        if (!aState && bState) return 1;
 
-      const aSeed = (parseInt(aSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
-      const bSeed = (parseInt(bSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
-      if (Math.sin(aSeed) > Math.sin(bSeed)) return -1;
-      if (Math.sin(aSeed) < Math.sin(bSeed)) return 1;
+        const aSeed = (parseInt(aSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
+        const bSeed = (parseInt(bSupplierId.toString().slice(-4), 16) || 0) + hourSeed;
+        if (Math.sin(aSeed) > Math.sin(bSeed)) return -1;
+        if (Math.sin(aSeed) < Math.sin(bSeed)) return 1;
 
-      if ((a.rating || 0) !== (b.rating || 0)) return (b.rating || 0) - (a.rating || 0);
-      return a.price - b.price;
-    });
+        if ((a.rating || 0) !== (b.rating || 0)) return (b.rating || 0) - (a.rating || 0);
+        return a.price - b.price;
+      });
+    }
 
     const paginatedProducts = products.slice(pageSize * (page - 1), pageSize * page);
     res.json({ products: paginatedProducts, page, pages: Math.ceil(count / pageSize) });

@@ -129,3 +129,50 @@ export const getSupplierOrders = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Complete order
+// @route   PUT /api/orders/:id/complete
+// @access  Private/Supplier
+export const completeOrder = async (req, res, next) => {
+  try {
+    console.log('PUT completeOrder called with ID:', req.params.id);
+    const docRef = db.collection('orders').doc(req.params.id);
+    await docRef.update({ isDelivered: true });
+    res.json({ message: 'Order marked as completed' });
+  } catch (error) {
+    console.error('Error completing order:', error);
+    next(error);
+  }
+};
+
+// @desc    Delete order
+// @route   DELETE /api/orders/:id
+// @access  Private/Supplier
+export const deleteOrder = async (req, res, next) => {
+  try {
+    console.log('DELETE deleteOrder called with ID:', req.params.id);
+    const docRef = db.collection('orders').doc(req.params.id);
+    await docRef.delete();
+    res.json({ message: 'Order removed successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    next(error);
+  }
+};
+
+// @desc    Cancel an order (consumer, within 1 hour)
+// @route   PUT /api/orders/:id/cancel
+// @access  Private
+export const cancelOrder = async (req, res, next) => {
+  try {
+    const docRef = db.collection('orders').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) { res.status(404); throw new Error('Order not found'); }
+    const data = doc.data();
+    if (data.isDelivered) { res.status(400); throw new Error('Cannot cancel a delivered order'); }
+    await docRef.update({ isCancelled: true, cancelledAt: new Date().toISOString() });
+    res.json({ message: 'Order cancelled successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

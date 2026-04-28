@@ -11,6 +11,7 @@ import DashboardScreen from './pages/DashboardScreen';
 import CartScreen from './pages/CartScreen';
 import ProfileScreen from './pages/ProfileScreen';
 import OrdersScreen from './pages/OrdersScreen';
+import WishlistScreen from './pages/WishlistScreen';
 
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
@@ -39,7 +40,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col bg-background dark:bg-slate-900 transition-colors duration-300 overflow-x-hidden">
       <Navbar />
-      <main className={`flex-grow container mx-auto px-2 md:px-6 pb-24 md:pb-12 ${userInfo ? 'pt-[200px] md:pt-28' : 'pt-24 md:pt-28'}`}>
+      <main className={`flex-grow container mx-auto px-2 md:px-6 pb-24 md:pb-12 ${userInfo ? (userInfo.role === 'supplier' ? 'pt-[110px] md:pt-28' : 'pt-[180px] md:pt-28') : 'pt-24 md:pt-28'}`}>
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/marketplace" element={<MarketplaceScreen />} />
@@ -49,6 +50,7 @@ function App() {
           <Route path="/cart" element={<CartScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
           <Route path="/orders" element={<OrdersScreen />} />
+          <Route path="/wishlist" element={<WishlistScreen />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/cookies" element={<CookiesPage />} />

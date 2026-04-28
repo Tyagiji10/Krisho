@@ -1,17 +1,22 @@
-import { ShoppingCart, Star, MapPin, CheckCircle, Users, Trash2 } from 'lucide-react';
+import { ShoppingCart, Star, MapPin, CheckCircle, Users, Trash2, Heart, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { addToCart, removeFromCart } from '../store/slices/cartSlice';
+import { toggleWishlist } from '../store/slices/wishlistSlice';
 import { useState } from 'react';
+import ChatWindow from './ChatWindow';
 
 const ProductCard = ({ product, viewMode = 'grid' }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [added, setAdded] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const { cartItems } = useSelector(state => state.cart);
+  const { items: wishlistItems } = useSelector(state => state.wishlist);
   
   const isInCart = cartItems.find(x => x.product === product._id);
+  const isWishlisted = wishlistItems.find(x => x._id === product._id);
 
   const [qty, setQty] = useState(1);
 
@@ -28,14 +33,23 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
     }));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+    // Haptic feedback
+    if (navigator.vibrate) navigator.vibrate(40);
   };
 
   const removeFromCartHandler = () => {
     dispatch(removeFromCart(product._id));
   };
 
+  const handleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dispatch(toggleWishlist(product));
+    if (navigator.vibrate) navigator.vibrate(30);
+  };
+
   return (
-    <div className={`bg-card dark:bg-slate-800 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-border dark:border-slate-700 hover:shadow-2xl transition-all group h-full flex ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3' : 'flex-col'}`}>
+    <div className={`bg-card dark:bg-slate-800 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-border dark:border-slate-700 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group h-full flex ${viewMode === 'list' ? 'flex-row items-center gap-4 p-3' : 'flex-col'}`}>
       <div className={`relative overflow-hidden bg-slate-100 dark:bg-slate-900 shrink-0 ${viewMode === 'list' ? 'w-24 h-24 md:w-32 md:h-32 rounded-xl' : 'aspect-square'}`}>
         <img 
           src={product.images?.[0] || 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=400&q=80'} 
@@ -48,9 +62,38 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
           </div>
         )}
         {product.stock <= 5 && product.stock > 0 && viewMode !== 'list' && (
-          <div className="absolute top-3 right-3 bg-red-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest">
+          <div className="absolute top-3 right-10 bg-red-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest">
             {t('only_left', { count: product.stock })}
           </div>
+        )}
+        {/* Chat with supplier button */}
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowChat(true); }}
+          className="absolute top-2.5 left-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-primary hover:scale-110"
+          title="Chat with Farmer"
+        >
+          <MessageSquare size={13} />
+        </button>
+
+        {/* Heart / Wishlist Button */}
+        <button
+          onClick={handleWishlist}
+          className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 ${
+            isWishlisted 
+              ? 'bg-red-500 text-white scale-110' 
+              : 'bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-red-400 hover:scale-110'
+          }`}
+          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart size={13} fill={isWishlisted ? 'currentColor' : 'none'} />
+        </button>
+
+        {showChat && (
+          <ChatWindow 
+            supplierId={product.supplier?._id || product.supplier} 
+            supplierName={product.supplier?.name || 'Agri Farmer'} 
+            onClose={() => setShowChat(false)} 
+          />
         )}
       </div>
 
@@ -100,10 +143,19 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                 </option>
               ))}
             </select>
+            
+            <button
+              onClick={() => setShowChat(true)}
+              className="p-2 md:p-3 rounded-lg md:rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all flex items-center justify-center min-w-[3rem] active:scale-95"
+              title="Chat with Farmer"
+            >
+              <MessageSquare size={16} />
+            </button>
+
             {isInCart ? (
               <button 
                 onClick={removeFromCartHandler}
-                className="p-2 md:p-3 rounded-lg md:rounded-xl transition-all flex items-center justify-center min-w-[3rem] bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600"
+                className="p-2 md:p-3 rounded-lg md:rounded-xl transition-all flex items-center justify-center min-w-[3rem] bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 active:scale-95"
               >
                 <Trash2 size={16} />
               </button>
@@ -111,7 +163,7 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
               <button 
                 onClick={addToCartHandler}
                 disabled={product.stock === 0}
-                className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all flex items-center justify-center min-w-[3rem] ${
+                className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all flex items-center justify-center min-w-[3rem] active:scale-95 ${
                   added
                     ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' 
                     : 'bg-primary/10 text-primary hover:bg-primary hover:text-white'

@@ -78,6 +78,12 @@ const BottomNavbar = () => {
             <Link
               key={item.id}
               to={item.id}
+              onClick={(e) => {
+                if (userInfo?.role === 'supplier' && (item.id === '/cart' || item.id === '/orders')) {
+                  e.preventDefault();
+                  alert('Supplier accounts are restricted from accessing purchasing workflows.');
+                }
+              }}
               className={`flex flex-col items-center gap-0.5 px-1 transition-all ${
                 location.pathname === item.id 
                   ? 'text-slate-900 dark:text-white' 

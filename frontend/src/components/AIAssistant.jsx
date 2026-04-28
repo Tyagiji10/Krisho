@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Bot, User } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 const AIAssistant = () => {
@@ -110,7 +110,10 @@ const AIAssistant = () => {
               <h3 className="font-black text-sm">Krisho AI Helper</h3>
               <p className="text-[10px] text-white/80">Agriculture & Marketplace Expert</p>
             </div>
-            <button onClick={() => setIsOpen(false)} className="ml-auto text-white/80 hover:text-white transition-colors">
+            <button onClick={() => setChatHistory([])} className="ml-auto mr-2 text-white/80 hover:text-white transition-colors" title="Clear Chat">
+              <Trash2 size={18} />
+            </button>
+            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors">
               <X size={20} />
             </button>
           </div>
@@ -118,7 +121,26 @@ const AIAssistant = () => {
           {/* Chat area */}
           <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50 dark:bg-slate-900">
             {chatHistory.length === 0 && (
-              <p className="text-center text-xs text-slate-400 my-auto pt-10">Ask me about crop pricing, setup tips, or farming advice!</p>
+              <div className="space-y-4 pt-4">
+                <p className="text-center text-xs text-slate-400">Ask me about crop pricing, setup tips, or farming advice!</p>
+                {/* Quick prompt chips */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    '🌿 Best crops for summer',
+                    '📈 How to price my produce',
+                    '🚜 Govt schemes for farmers',
+                    '📦 Reduce delivery costs',
+                  ].map(chip => (
+                    <button
+                      key={chip}
+                      onClick={() => setMessage(chip.replace(/^[^ ]+ /, ''))}
+                      className="text-left px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary transition-all leading-snug"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {chatHistory.map((msg, index) => (
               <div key={index} className={`flex items-start gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -129,7 +151,11 @@ const AIAssistant = () => {
             ))}
             {loading && (
               <div className="flex items-center gap-2 text-slate-400">
-                <Bot size={18} className="animate-bounce" />
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay:'0ms'}} />
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay:'150ms'}} />
+                  <span className="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style={{animationDelay:'300ms'}} />
+                </div>
                 <span className="text-xs">Thinking...</span>
               </div>
             )}
@@ -138,13 +164,6 @@ const AIAssistant = () => {
 
           {/* Input form */}
           <form onSubmit={handleSend} className="p-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex gap-2 relative">
-            <button 
-              type="button" 
-              onClick={() => setIsOpen(false)}
-              className="absolute -top-4 right-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-full text-slate-400 hover:text-slate-600 shadow-md"
-            >
-              <X size={12} />
-            </button>
             <input 
               type="text"
               placeholder="Type your question..."

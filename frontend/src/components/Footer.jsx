@@ -1,7 +1,17 @@
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Leaf, Mail, Phone, MapPin, Globe, MessageCircle, Share2 } from 'lucide-react';
 
 const Footer = () => {
+  const { userInfo } = useSelector((state) => state.auth);
+  
+  const handleSupplierRestriction = (e) => {
+    if (userInfo?.role === 'supplier') {
+      e.preventDefault();
+      alert('Supplier accounts are restricted from accessing the Digital Mandi consumer features.');
+    }
+  };
+
   return (
     <footer className="bg-slate-900 dark:bg-slate-950 text-slate-300 dark:text-slate-400 pt-12 pb-24 md:pb-6 border-t border-slate-800 dark:border-slate-900">
       <div className="container mx-auto px-8">
@@ -29,7 +39,7 @@ const Footer = () => {
             <h4 className="text-white font-bold mb-4 text-xs md:text-sm">Quick Links</h4>
             <ul className="space-y-2 text-[10px] md:text-sm text-slate-400">
               <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
-              <li><Link to="/marketplace" className="hover:text-primary transition-colors">Marketplace</Link></li>
+              <li><Link to="/marketplace" onClick={handleSupplierRestriction} className="hover:text-primary transition-colors">Marketplace</Link></li>
               <li><Link to="/register" className="hover:text-primary transition-colors">Join as Farmer</Link></li>
               <li><a href="/#about" className="hover:text-primary transition-colors">About Us</a></li>
             </ul>
@@ -39,10 +49,10 @@ const Footer = () => {
           <div className="col-span-1">
             <h4 className="text-white font-bold mb-4 text-xs md:text-sm">Categories</h4>
             <ul className="space-y-2 text-[10px] md:text-sm text-slate-400">
-              <li><Link to="/marketplace?category=Grains" className="hover:text-primary transition-colors">Organic Grains</Link></li>
-              <li><Link to="/marketplace?category=Vegetables" className="hover:text-primary transition-colors">Fresh Veggies</Link></li>
-              <li><Link to="/marketplace?category=Dairy" className="hover:text-primary transition-colors">Dairy Products</Link></li>
-              <li><Link to="/marketplace?category=Spices" className="hover:text-primary transition-colors">Spices & Herbs</Link></li>
+              <li><Link to="/marketplace?category=Grains" onClick={handleSupplierRestriction} className="hover:text-primary transition-colors">Organic Grains</Link></li>
+              <li><Link to="/marketplace?category=Vegetables" onClick={handleSupplierRestriction} className="hover:text-primary transition-colors">Fresh Veggies</Link></li>
+              <li><Link to="/marketplace?category=Dairy" onClick={handleSupplierRestriction} className="hover:text-primary transition-colors">Dairy Products</Link></li>
+              <li><Link to="/marketplace?category=Spices" onClick={handleSupplierRestriction} className="hover:text-primary transition-colors">Spices & Herbs</Link></li>
             </ul>
           </div>
 

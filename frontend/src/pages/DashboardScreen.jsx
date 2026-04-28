@@ -193,14 +193,39 @@ const DashboardScreen = () => {
     try {
       let finalImageUrl = newProduct.image || 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?auto=format&fit=crop&w=800&q=80';
 
-      // Check if image is a base64 string (local upload)
       if (finalImageUrl.startsWith('data:image')) {
+        const compressImage = (base64Str) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64Str;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 400;
+              const MAX_HEIGHT = 400;
+              let width = img.width;
+              let height = img.height;
+              if (width > height) {
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+              } else {
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+          });
+        };
+
+        const compressedImage = await compressImage(finalImageUrl);
+
         const { getStorage, ref, uploadString, getDownloadURL } = await import('firebase/storage');
-        await import('../firebase.js'); // Ensure firebase is initialized
+        await import('../firebase.js');
         const storage = getStorage();
         const imageRef = ref(storage, `products/${userInfo._id}_${Date.now()}`);
         
-        const snapshot = await uploadString(imageRef, finalImageUrl, 'data_url');
+        const snapshot = await uploadString(imageRef, compressedImage, 'data_url');
         finalImageUrl = await getDownloadURL(snapshot.ref);
       }
 
