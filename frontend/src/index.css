@@ -78,3 +78,23 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Hide Google Translate top banner and layout artifacts */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-banner {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+font {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
