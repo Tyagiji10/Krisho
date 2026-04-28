@@ -143,8 +143,14 @@ const Navbar = () => {
     
     const recognition = new SpeechRecognition();
     setRecognitionInstance(recognition);
-    
-    recognition.lang = i18n.language === 'hi' ? 'hi-IN' : (i18n.language === 'mr' ? 'mr-IN' : 'en-IN');
+    const langMap = {
+      en: 'en-IN',
+      hi: 'hi-IN',
+      mr: 'mr-IN',
+      te: 'te-IN',
+      pa: 'pa-IN'
+    };
+    recognition.lang = langMap[i18n.language] || 'en-IN';
     recognition.interimResults = true;
     recognition.continuous = true; // Use continuous for better "real-time" feeling
 
