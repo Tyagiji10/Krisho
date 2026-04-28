@@ -40,10 +40,10 @@ const UserPortal = ({ user }) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'Order History', icon: <History size={20}/>, link: user.role === 'supplier' ? '/dashboard?tab=orders' : '/orders', bg: 'bg-blue-500' },
-            { label: 'Dashboard', icon: <LayoutDashboard size={20}/>, link: '/dashboard', bg: 'bg-emerald-500' },
+            { label: 'Dashboard', icon: <LayoutDashboard size={20}/>, link: '/dashboard', bg: 'bg-emerald-500', hide: user.role !== 'supplier' },
             { label: 'Cart', icon: <ShoppingCart size={20}/>, link: '/cart', bg: 'bg-orange-500' },
             { label: 'Profile', icon: <User size={20}/>, link: '/profile', bg: 'bg-indigo-500' },
-          ].map((action, idx) => (
+          ].filter(action => !action.hide).map((action, idx) => (
             <Link 
               key={idx} 
               to={action.link}
