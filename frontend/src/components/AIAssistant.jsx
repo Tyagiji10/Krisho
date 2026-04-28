@@ -99,7 +99,7 @@ const AIAssistant = () => {
       {isOpen && (
         <div 
           ref={chatWindowRef}
-          className="fixed right-6 bottom-36 md:bottom-24 z-50 w-[320px] sm:w-[380px] h-[400px] md:h-[480px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300"
+          className="fixed left-1/2 -translate-x-1/2 bottom-20 md:left-auto md:translate-x-0 md:right-6 md:bottom-24 z-50 w-[calc(100%-2rem)] sm:w-[380px] h-[400px] md:h-[480px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-300"
         >
           {/* Header */}
           <div className="bg-primary p-4 text-white flex items-center gap-3">
