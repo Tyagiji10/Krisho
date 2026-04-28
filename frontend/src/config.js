@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.MODE === 'development' 
   ? '' // Use Vite proxy in development
-  : ''; // Use relative path in production (handled by vercel.json rewrites)
+  : 'https://krisho.onrender.com'; // Use Render backend in production
 
 export default API_URL;
