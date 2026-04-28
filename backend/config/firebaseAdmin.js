@@ -1,7 +1,9 @@
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 // Check if Firebase service account credentials are provided
 const initializeFirebaseAdmin = () => {

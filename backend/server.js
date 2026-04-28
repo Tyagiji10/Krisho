@@ -7,8 +7,9 @@ import http from 'http';
 import path from 'path';
 import { db } from './config/firebaseAdmin.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from both backend and root directories
+dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const app = express();
 const server = http.createServer(app);
