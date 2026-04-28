@@ -374,6 +374,10 @@ const DashboardScreen = () => {
                         <div>
                           <p className="font-black text-lg text-foreground dark:text-white">{order.orderItems[0].name}</p>
                           <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">ID: #{order._id.slice(-6)}</p>
+                          <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
+                            <span>Qty: <strong className="text-slate-700 dark:text-slate-200">{order.orderItems[0].qty} {order.orderItems[0].unit || 'kg'}</strong></span>
+                            <span>Time: <strong className="text-slate-700 dark:text-slate-200">{new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({new Date(order.createdAt).toLocaleDateString()})</strong></span>
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-8">
@@ -469,6 +473,10 @@ const DashboardScreen = () => {
                       <div>
                         <p className="font-black text-lg text-foreground dark:text-white">{order.orderItems[0].name}</p>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Customer: {order.consumer?.name || 'Guest'}</p>
+                        <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
+                          <span>Qty: <strong className="text-slate-700 dark:text-slate-200">{order.orderItems[0].qty} {order.orderItems[0].unit || 'kg'}</strong></span>
+                          <span>Time: <strong className="text-slate-700 dark:text-slate-200">{new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({new Date(order.createdAt).toLocaleDateString()})</strong></span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-8">
