@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNavbar from './components/BottomNavbar';
+import AIAssistant from './components/AIAssistant';
 import Footer from './components/Footer';
 import HomeScreen from './pages/HomeScreen';
 import LoginScreen from './pages/LoginScreen';
@@ -54,6 +55,7 @@ function App() {
         </Routes>
       </main>
       <BottomNavbar />
+      <AIAssistant />
       <Footer />
     </div>
   );

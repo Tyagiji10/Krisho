@@ -5,13 +5,14 @@ import { setCredentials } from '../store/slices/authSlice';
 import axios from 'axios';
 import { signInWithPopup, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
-import { LogIn, Mail, Lock, AlertCircle, User, MapPin, ChevronDown, CheckCircle2, X } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, User, MapPin, ChevronDown, CheckCircle2, X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { indianStates, topCitiesByState } from '../utils/indiaData';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -331,13 +332,20 @@ const LoginScreen = () => {
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
-                className="w-full pl-11 pr-4 py-3 md:pl-12 md:pr-4 md:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none dark:text-white text-xs md:text-base"
+                className="w-full pl-11 pr-12 py-3 md:pl-12 md:pr-12 md:py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none dark:text-white text-xs md:text-base"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 

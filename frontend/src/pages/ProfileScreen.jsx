@@ -16,7 +16,8 @@ import {
   Camera,
   Star,
   X,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
@@ -267,6 +268,10 @@ const ProfileScreen = () => {
               </div>
             </div>
           </div>
+
+          <button onClick={() => { dispatch(logout()); window.location.href = '/login'; }} className="w-full py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark active:scale-95 touch-manipulation transition-all text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mb-3">
+            <LogOut size={18} /> Logout Session
+          </button>
 
           <button onClick={handleDeleteAccount} className="w-full py-4 bg-red-500/10 text-red-500 font-black rounded-2xl hover:bg-red-500 hover:text-white active:bg-red-600 active:scale-95 touch-manipulation transition-all text-sm shadow-sm border border-red-500/20 md:py-4.5">
             Delete My Account
