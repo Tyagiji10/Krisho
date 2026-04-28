@@ -34,7 +34,19 @@ export const getProducts = async (req, res, next) => {
     }
 
     if (keywordText) {
-      products = products.filter(p => p.name.toLowerCase().includes(keywordText.toLowerCase()));
+      products = products.filter(p => {
+        const prodName = p.name.toLowerCase();
+        const key = keywordText.toLowerCase();
+        
+        if (prodName.includes(key) || key.includes(prodName)) return true;
+        
+        const prodWords = prodName.split(/\s+/);
+        const keyWords = key.split(/\s+/);
+        
+        return prodWords.some(pw => 
+          keyWords.some(kw => kw.length > 1 && (pw.includes(kw) || kw.includes(pw)))
+        );
+      });
     }
     if (categoryText) {
       products = products.filter(p => p.category.toLowerCase() === categoryText.toLowerCase());

@@ -171,14 +171,14 @@ const Navbar = () => {
         }
       }
 
-      const currentTranscript = (finalTranscript || interimTranscript).replace(/\./g, '').trim();
+      const currentTranscript = (finalTranscript || interimTranscript).replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, ' ').trim();
       if (currentTranscript) {
         setSearchQuery(currentTranscript);
       }
 
       // If we have a final result, we set a small timeout to auto-search 
       if (finalTranscript.trim()) {
-        const sanitized = finalTranscript.replace(/\./g, '').trim();
+        const sanitized = finalTranscript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, ' ').trim();
         const timeoutId = setTimeout(() => {
           navigate(`/marketplace?keyword=${sanitized}`);
           setShowSuggestions(false);
