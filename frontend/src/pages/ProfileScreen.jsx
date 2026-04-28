@@ -40,6 +40,9 @@ const ProfileScreen = () => {
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
+    document.cookie = `googtrans=/en/${lng}; path=/`;
+    document.cookie = `googtrans=/en/${lng}; path=/; domain=${window.location.hostname}`;
+    window.location.reload();
   };
 
   const languages = [
