@@ -110,6 +110,9 @@ const AIAssistant = () => {
               <h3 className="font-black text-sm">Krisho AI Helper</h3>
               <p className="text-[10px] text-white/80">Agriculture & Marketplace Expert</p>
             </div>
+            <button onClick={() => setIsOpen(false)} className="ml-auto text-white/80 hover:text-white transition-colors">
+              <X size={20} />
+            </button>
           </div>
 
           {/* Chat area */}
@@ -134,7 +137,14 @@ const AIAssistant = () => {
           </div>
 
           {/* Input form */}
-          <form onSubmit={handleSend} className="p-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex gap-2">
+          <form onSubmit={handleSend} className="p-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex gap-2 relative">
+            <button 
+              type="button" 
+              onClick={() => setIsOpen(false)}
+              className="absolute -top-4 right-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1.5 rounded-full text-slate-400 hover:text-slate-600 shadow-md"
+            >
+              <X size={12} />
+            </button>
             <input 
               type="text"
               placeholder="Type your question..."
