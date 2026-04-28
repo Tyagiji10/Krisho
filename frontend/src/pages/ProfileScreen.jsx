@@ -87,17 +87,52 @@ const ProfileScreen = () => {
     try {
       setUploadingImage(true);
       
+      // Client-side image compression helper
+      const compressImage = (base64Str) => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.src = base64Str;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400;
+            const MAX_HEIGHT = 400;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+        });
+      };
+
+      const compressedImage = await compressImage(imageSrc);
+      
       const config = {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       };
-      const { data } = await axios.put('/api/users/profile', { profileImage: imageSrc }, config);
+      const { data } = await axios.put('/api/users/profile', { profileImage: compressedImage }, config);
       dispatch(setCredentials(data));
       
       setIsCropping(false);
       setImageSrc(null);
     } catch (e) {
       console.error(e);
-      alert('Failed to upload image. Please verify your Firebase Storage settings.');
+      alert(`Upload Failed: ${e.response?.data?.message || e.message}`);
       setIsCropping(false);
       setImageSrc(null);
     } finally {
