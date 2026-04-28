@@ -4,6 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import { Server } from 'socket.io';
 import http from 'http';
+import path from 'path';
 import { db } from './config/firebaseAdmin.js';
 
 // Load environment variables
@@ -93,6 +94,20 @@ app.use((err, req, res, next) => {
 
 // Start Server
 if (!process.env.VERCEL) {
+  const __dirname = path.resolve();
+  
+  if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+    app.get('*', (req, res) =>
+      res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'))
+    );
+  } else {
+    app.get('/', (req, res) => {
+      res.send('API is running....');
+    });
+  }
+
   server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
