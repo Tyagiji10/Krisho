@@ -47,7 +47,7 @@ const ProfileScreen = () => {
     { code: 'hi', name: 'हिन्दी (Hindi)' },
     { code: 'mr', name: 'मराठी (Marathi)' },
     { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)' },
-    { code: 'ta', name: 'தமிழ் (Tamil)' },
+    { code: 'te', name: 'తెలుగు (Telugu)' },
   ];
 
   const handleDeleteAccount = async () => {

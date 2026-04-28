@@ -105,6 +105,72 @@ i18n
           active_orders: "सक्रिय ऑर्डर",
           active_listings: "सक्रिय लिस्टिंग"
         }
+      },
+      te: {
+        translation: {
+          welcome: "కృషో కి స్వాగతం",
+          tagline: "భారతదేశపు ప్రత్యక్ష వ్యవసాయ-నుండి-టేబుల్ మార్కెట్",
+          marketplace: "డిజిటల్ మండి",
+          dashboard: "డ్యాష్‌బోర్డ్",
+          overview: "అవలోకనం",
+          products: "నా ఉత్పత్తులు",
+          customers: "కస్టమర్లు",
+          payments: "చెల్లింపు వివరాలు",
+          cart: "కార్ట్",
+          orders: "నా ఆర్డర్లు",
+          profile: "ప్రొఫైల్",
+          login: "లాగిన్",
+          join: "కృషో లో చేరండి",
+          search_placeholder: "ధాన్యాలు, కూరగాయలు, పండ్లు వెతకండి...",
+          categories: {
+            all: "అన్ని వస్తువులు",
+            grains: "ధాన్యాలు",
+            vegetables: "కూరగాయలు",
+            fruits: "పండ్లు",
+            dairy: "పాల ఉత్పత్తులు",
+            organic: "ఆర్గానిక్",
+            spices: "మసాలాలు"
+          },
+          purchased_by: "{{count}} మంది వినియోగదారులు కొనుగోలు చేశారు",
+          add_to_cart: "కార్ట్ కి జోడించండి",
+          only_left: "కేవలం {{count}} మాత్రమే మిగిలి ఉన్నాయి",
+          total_earnings: "మొత్తం ఆదాయం",
+          active_orders: "యాక్టివ్ ఆర్డర్లు",
+          active_listings: "యాక్టివ్ లిస్టింగ్‌లు"
+        }
+      },
+      pa: {
+        translation: {
+          welcome: "ਕ੍ਰਿਸ਼ੋ ਵਿੱਚ ਤੁਹਾਡਾ ਸੁਆਗਤ ਹੈ",
+          tagline: "ਭਾਰਤ ਦੀ ਸਿੱਧੀ ਫਾਰਮ-ਟੂ-ਟੇਬਲ ਮਾਰਕੀਟ",
+          marketplace: "ਡਿਜੀਟਲ ਮੰਡੀ",
+          dashboard: "ਡੈਸ਼ਬੋਰਡ",
+          overview: "ਸੰਖੇਪ",
+          products: "ਮੇਰੇ ਉਤਪਾਦ",
+          customers: "ਗਾਹਕ",
+          payments: "ਭੁਗਤਾਨ ਦੇ ਵੇਰਵੇ",
+          cart: "ਕਾਰਟ",
+          orders: "ਮੇਰੇ ਆਰਡਰ",
+          profile: "ਪ੍ਰੋਫਾਈਲ",
+          login: "ਲੌਗਇਨ",
+          join: "ਕ੍ਰਿਸ਼ੋ ਵਿੱਚ ਸ਼ਾਮਲ ਹੋਵੋ",
+          search_placeholder: "ਅਨਾਜ, ਸਬਜ਼ੀਆਂ, ਫਲ ਲੱਭੋ...",
+          categories: {
+            all: "ਸਾਰੀਆਂ ਚੀਜ਼ਾਂ",
+            grains: "ਅਨਾਜ",
+            vegetables: "ਸਬਜ਼ੀਆਂ",
+            fruits: "ਫਲ",
+            dairy: "ਡੇਅਰੀ",
+            organic: "ਜੈਵਿਕ",
+            spices: "ਮਸਾਲੇ"
+          },
+          purchased_by: "{{count}} ਉਪਭੋਗਤਾਵਾਂ ਦੁਆਰਾ ਖਰੀਦਿਆ ਗਿਆ",
+          add_to_cart: "ਕਾਰਟ ਵਿੱਚ ਸ਼ਾਮਲ ਕਰੋ",
+          only_left: "ਸਿਰਫ {{count}} ਬਾਕੀ",
+          total_earnings: "ਕੁੱਲ ਕਮਾਈ",
+          active_orders: "ਸਰਗਰਮ ਆਰਡਰ",
+          active_listings: "ਸਰਗਰਮ ਸੂਚੀਆਂ"
+        }
       }
     },
     fallbackLng: 'en',
