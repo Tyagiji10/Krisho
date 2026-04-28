@@ -88,15 +88,10 @@ const ProfileScreen = () => {
       setUploadingImage(true);
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       
-      const storage = getStorage();
-      const storageRef = ref(storage, `profiles/${userInfo._id}_${Date.now()}.jpg`);
-      await uploadString(storageRef, croppedImage, 'data_url');
-      const downloadURL = await getDownloadURL(storageRef);
-
       const config = {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       };
-      const { data } = await axios.put('/api/users/profile', { profileImage: downloadURL }, config);
+      const { data } = await axios.put('/api/users/profile', { profileImage: croppedImage }, config);
       dispatch(setCredentials(data));
       
       setIsCropping(false);
