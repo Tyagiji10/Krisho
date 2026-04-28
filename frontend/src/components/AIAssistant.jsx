@@ -88,8 +88,8 @@ const AIAssistant = () => {
       <button 
         ref={toggleButtonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed z-50 flex items-center justify-center rounded-2xl shadow-2xl cursor-pointer transition-all duration-300 bg-primary hover:scale-105 active:scale-95 text-white ${
-          isOpen ? 'right-6 bottom-[450px] md:bottom-[520px] p-3' : 'right-6 bottom-20 md:bottom-6 p-4'
+        className={`fixed z-50 hidden md:flex items-center justify-center rounded-2xl shadow-2xl cursor-pointer transition-all duration-300 bg-primary hover:scale-105 active:scale-95 text-white ${
+          isOpen ? 'right-6 bottom-[450px] md:bottom-[520px] p-3' : 'right-6 bottom-6 p-4'
         }`}
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} className="animate-pulse" />}
