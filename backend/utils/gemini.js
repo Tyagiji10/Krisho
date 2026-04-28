@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AIzaSy...");
 
 export const categorizeProduct = async (name, description) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       You are an expert in Indian agriculture and marketplaces. 
@@ -40,7 +40,7 @@ export const categorizeProduct = async (name, description) => {
 
 export const generateProductDescription = async (name, category) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
       You are an expert copywriter for an Indian agricultural marketplace called "Krisho". 
@@ -58,5 +58,31 @@ export const generateProductDescription = async (name, category) => {
   } catch (error) {
     console.error("Gemini Description Error:", error);
     return `Premium quality ${name} freshly harvested from our local farms. Organic and healthy.`; // Fallback
+  }
+};
+
+export const generateChatResponse = async (message, history = []) => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    
+    const chat = model.startChat({
+      history: [
+        {
+          role: "user",
+          parts: [{ text: "You are the official AI Assistant for Krisho, an Indian agricultural marketplace that connects farmers directly with consumers. Answer briefly, politely, and accurately. You understand farming, crop pricing, logistics, and marketplace instructions." }]
+        },
+        {
+          role: "model",
+          parts: [{ text: "Namaste! I am the Krisho AI Helper. How can I support you today?" }]
+        },
+        ...history
+      ]
+    });
+
+    const result = await chat.sendMessage(message);
+    return result.response.text().trim();
+  } catch (error) {
+    console.error("Gemini Chat Error:", error);
+    return "I am experiencing connection issues. Let me know how else I can serve you.";
   }
 };
