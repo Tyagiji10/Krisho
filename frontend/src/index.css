@@ -98,3 +98,7 @@ font {
   background-color: transparent !important;
   box-shadow: none !important;
 }
+
+.skiptranslate {
+  display: none !important;
+}
