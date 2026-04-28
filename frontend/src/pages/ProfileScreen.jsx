@@ -86,12 +86,11 @@ const ProfileScreen = () => {
   const handleSaveCrop = async () => {
     try {
       setUploadingImage(true);
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       
       const config = {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       };
-      const { data } = await axios.put('/api/users/profile', { profileImage: croppedImage }, config);
+      const { data } = await axios.put('/api/users/profile', { profileImage: imageSrc }, config);
       dispatch(setCredentials(data));
       
       setIsCropping(false);
