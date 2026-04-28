@@ -151,8 +151,9 @@ const Navbar = () => {
       pa: 'pa-IN'
     };
     recognition.lang = langMap[i18n.language] || 'en-IN';
-    recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 5;
 
     recognition.onstart = () => {
       setIsListening(true);
