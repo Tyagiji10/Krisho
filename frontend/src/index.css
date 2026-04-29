@@ -16,16 +16,16 @@
 }
 
 .dark {
-  --primary: #81c784;
-  --primary-dark: #2e7d32;
-  --secondary: #ffc107;
-  --accent: #ff5252;
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --card: #1e293b;
-  --border: #334155;
+  --primary: #4ade80;
+  --primary-dark: #22c55e;
+  --secondary: #fbbf24;
+  --accent: #f87171;
+  --background: #000000; /* Pure Deep Black */
+  --foreground: #ffffff; /* High Contrast White */
+  --muted: #0a0a0a;
+  --muted-foreground: #a1a1aa;
+  --card: #09090b; /* Deep Zinc Black */
+  --border: #18181b;
 }
 
 @theme {
@@ -41,8 +41,12 @@
   --color-border: var(--border);
 }
 
+html {
+  @apply bg-background;
+}
+
 body {
-  @apply bg-background text-foreground transition-colors duration-300 antialiased;
+  @apply text-foreground transition-colors duration-300 antialiased min-h-screen relative bg-transparent;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 

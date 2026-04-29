@@ -11,35 +11,73 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const BottomNavbar = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const { userInfo } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
 
   if (!userInfo) return null;
 
+  const speak = (text) => {
+    if (!window.speechSynthesis || !text) return;
+    
+    // Ensure voices are loaded
+    const voices = window.speechSynthesis.getVoices();
+    
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    
+    if (i18n.language.startsWith('hi')) {
+      utterance.lang = 'hi-IN';
+      const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+      if (hiVoice) utterance.voice = hiVoice;
+    } else {
+      utterance.lang = 'en-IN';
+      const enVoice = voices.find(v => v.lang.startsWith('en') && (v.lang.includes('IN') || v.name.includes('India')));
+      if (enVoice) utterance.voice = enVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const isSupplier = userInfo.role === 'supplier';
+
   const navItems = [
-    { id: '/', icon: <Home size={22} strokeWidth={1.5} />, label: 'Home' },
-    { id: '/orders', icon: <PackageCheck size={22} strokeWidth={1.5} />, label: 'Orders' },
+    { 
+      id: '/', 
+      icon: <Home size={22} strokeWidth={1.5} />, 
+      label: 'Home',
+      voice: isSupplier ? 'nav_guides.home_supplier' : 'nav_guides.home_consumer'
+    },
+    { 
+      id: isSupplier ? '/dashboard?tab=products' : '/orders', 
+      icon: isSupplier ? <Menu size={22} strokeWidth={1.5} /> : <PackageCheck size={22} strokeWidth={1.5} />, 
+      label: isSupplier ? 'Manage Mandi' : 'Orders',
+      voice: isSupplier ? 'nav_guides.mandi' : 'nav_guides.orders'
+    },
     { 
       id: 'ai-chat', 
       icon: <div className="p-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/30"><Sparkles size={18} /></div>, 
       label: 'AI Helper',
-      isAction: true
+      isAction: true,
+      voice: 'nav_guides.ai'
     },
     { 
-      id: '/cart', 
+      id: isSupplier ? '/dashboard?tab=orders' : '/cart', 
       icon: (
         <div className="relative">
-          <ShoppingCart size={22} strokeWidth={1.5} />
-          {cartItems.length > 0 && (
+          {isSupplier ? <PackageCheck size={22} strokeWidth={1.5} /> : <ShoppingCart size={22} strokeWidth={1.5} />}
+          {!isSupplier && cartItems.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">
               {cartItems.length}
             </span>
           )}
         </div>
       ), 
-      label: 'Cart' 
+      label: isSupplier ? 'Incoming' : 'Cart',
+      voice: isSupplier ? 'nav_guides.incoming' : 'nav_guides.cart'
     },
     { 
       id: '/profile', 
@@ -49,11 +87,13 @@ const BottomNavbar = () => {
           <span className="absolute top-0 right-0 w-2 h-2 bg-pink-500 rounded-full border border-white dark:border-slate-900"></span>
         </div>
       ), 
-      label: 'You' 
+      label: 'You',
+      voice: 'nav_guides.profile'
     },
   ];
 
   const handleAIChatClick = () => {
+    speak(t('nav_guides.ai'));
     window.dispatchEvent(new CustomEvent('toggle-ai-chat'));
   };
 
@@ -79,6 +119,7 @@ const BottomNavbar = () => {
               key={item.id}
               to={item.id}
               onClick={(e) => {
+                speak(t(item.voice));
                 if (userInfo?.role === 'supplier' && (item.id === '/cart' || item.id === '/orders')) {
                   e.preventDefault();
                   alert('Supplier accounts are restricted from accessing purchasing workflows.');

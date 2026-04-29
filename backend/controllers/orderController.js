@@ -118,7 +118,10 @@ export const getSupplierOrders = async (req, res, next) => {
     const orders = [];
     snapshot.forEach(doc => {
       const data = doc.data();
-      const isSupplierOrder = data.orderItems.some(item => item.supplier === req.user._id);
+      const isSupplierOrder = data.orderItems?.some(item => {
+        const itemSupplierId = item.supplier?._id || item.supplier;
+        return itemSupplierId?.toString() === req.user._id?.toString();
+      });
       if (isSupplierOrder) {
         orders.push({ _id: doc.id, ...data });
       }

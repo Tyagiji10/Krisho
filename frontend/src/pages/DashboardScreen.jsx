@@ -1,6 +1,7 @@
 import { useSelector } from 'react-redux';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { 
   Package, 
@@ -19,13 +20,16 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Image as ImageIcon,
-  Edit3
+  Edit3,
+  Printer,
+  Star,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
 import ImageCropper from '../components/ImageCropper';
 
 const DashboardScreen = () => {
+  const { t, i18n } = useTranslation();
   const { userInfo } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -35,6 +39,13 @@ const DashboardScreen = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
   // Data States
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -46,6 +57,8 @@ const DashboardScreen = () => {
   const [selectedDashboardCategory, setSelectedDashboardCategory] = useState('All');
   const [isEditing, setIsEditing] = useState(false);
   const [editProductId, setEditProductId] = useState(null);
+  const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
+  const [supplierReviews, setSupplierReviews] = useState([]);
 
   // Form States
   const [newProduct, setNewProduct] = useState({
@@ -71,21 +84,24 @@ const DashboardScreen = () => {
     setIsLoading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const [orderRes, productRes] = await Promise.all([
+      const [orderRes, productRes, reviewsRes] = await Promise.all([
         axios.get(`/api/orders/supplier`, config),
-        axios.get(`/api/products?keyword=&city=${userInfo.city}`, config)
+        axios.get(`/api/products?keyword=&city=${userInfo.city}`, config),
+        axios.get(`/api/reviews/${userInfo._id}`, config).catch(() => ({ data: [] }))
       ]);
       
       const rawProducts = productRes?.data?.products || [];
       const rawOrders = Array.isArray(orderRes?.data) ? orderRes.data : [];
       
       // Filter products by current supplier
-      const myProducts = rawProducts.filter(p => 
-        p.supplier?._id === userInfo._id || p.supplier === userInfo._id
-      );
+      const myProducts = rawProducts.filter(p => {
+        const pSupplierId = p.supplier?._id || p.supplier;
+        return pSupplierId?.toString() === userInfo._id?.toString();
+      });
       
       setOrders(rawOrders);
       setProducts(myProducts);
+      setSupplierReviews(reviewsRes.data);
 
       // Get latest user info for earnings
       try {
@@ -105,6 +121,109 @@ const DashboardScreen = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const grossEarnings = orders.reduce((acc, order) => {
+    const supplierTotal = (order.orderItems || [])
+      .filter(item => {
+        const supplierId = item.supplier?._id || item.supplier;
+        return supplierId?.toString() === userInfo._id?.toString();
+      })
+      .reduce((sum, item) => sum + (item.price * item.qty), 0);
+    return acc + supplierTotal;
+  }, 0);
+
+  const netProfit = orders.reduce((acc, order) => {
+    const supplierTotal = (order.orderItems || [])
+      .filter(item => {
+        const supplierId = item.supplier?._id || item.supplier;
+        return supplierId?.toString() === userInfo._id?.toString();
+      })
+      .reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const platformCommission = supplierTotal * 0.08;
+    const deliveryCharge = order.shippingPrice || 0;
+    return acc + Math.max(0, supplierTotal - platformCommission - deliveryCharge);
+  }, 0);
+
+  const handlePrintOrder = (order) => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Order Receipt #${order._id}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 20px; margin-bottom: 30px; }
+            .logo { font-size: 28px; font-weight: 900; color: #22c55e; letter-spacing: -1px; }
+            .invoice-details { text-align: right; }
+            .invoice-details strong { font-size: 20px; letter-spacing: 2px; color: #888; }
+            .section { margin-bottom: 30px; }
+            .section h3 { margin-bottom: 10px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+            th { background: #f8fafc; font-weight: bold; color: #64748b; text-transform: uppercase; font-size: 12px; }
+            .total { text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; }
+            .total-row { display: flex; justify-content: flex-end; gap: 40px; margin-bottom: 5px; font-size: 14px; color: #555; }
+            .total-final { font-size: 18px; font-weight: bold; color: #000; margin-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">🌱 Krisho</div>
+            <div class="invoice-details">
+              <strong>INVOICE</strong><br/>
+              #${order._id}<br/>
+              Date: ${new Date(order.createdAt).toLocaleDateString()}
+            </div>
+          </div>
+          
+          <div class="section">
+            <h3>Shipping Details</h3>
+            <p>
+              <strong>${order.consumer?.name || 'Customer'}</strong><br/>
+              ${order.shippingAddress?.address || 'Default Address'}<br/>
+              ${order.shippingAddress?.city || userInfo.city}, ${order.shippingAddress?.state || userInfo.state}
+            </p>
+          </div>
+
+          <div class="section">
+            <h3>Order Items</h3>
+            <table>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+              ${order.orderItems.map(item => `
+                <tr>
+                  <td><strong>${item.name}</strong></td>
+                  <td>${item.qty} ${item.unit || 'kg'}</td>
+                  <td>Rs. ${item.price}</td>
+                  <td>Rs. ${item.price * item.qty}</td>
+                </tr>
+              `).join('')}
+            </table>
+            <div class="total">
+              <div class="total-row"><span>Subtotal:</span> <span>Rs. ${order.itemsPrice}</span></div>
+              <div class="total-row"><span>Delivery:</span> <span>Rs. ${order.shippingPrice}</span></div>
+              <div class="total-row total-final"><span>Total Amount:</span> <span>Rs. ${order.totalPrice}</span></div>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 50px; color: #94a3b8; font-size: 12px; font-weight: bold;">
+            Thank you for shopping with Krisho!<br/>
+            Direct from Farm to your Home.
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   const handleImageSelect = (e) => {
@@ -273,19 +392,45 @@ const DashboardScreen = () => {
 
   if (!userInfo) return null;
 
+  // Voice Guide: speaks how each section works when clicked
+  const speakGuide = (tabId) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const message = t(`dashboard_guides.${tabId}`);
+    if (message) {
+      const voices = window.speechSynthesis.getVoices();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      
+      if (i18n.language.startsWith('hi')) {
+        utterance.lang = 'hi-IN';
+        const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+        if (hiVoice) utterance.voice = hiVoice;
+      } else {
+        utterance.lang = 'en-IN';
+        const enVoice = voices.find(v => v.lang.startsWith('en') && (v.lang.includes('IN') || v.name.includes('India')));
+        if (enVoice) utterance.voice = enVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const sidebarItems = [
     { id: 'overview', icon: <TrendingUp size={20}/>, label: 'Overview' },
     { id: 'products', icon: <Package size={20}/>, label: 'My Products' },
     { id: 'orders', icon: <ShoppingCart size={20}/>, label: 'Orders' },
+    { id: 'reviews', icon: <Star size={20}/>, label: 'Reviews' },
     { id: 'customers', icon: <Users size={20}/>, label: 'Customers' },
     { id: 'payments', icon: <CreditCard size={20}/>, label: 'Payment Details' },
   ];
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 pb-12 px-8">
-      {/* Sidebar */}
-      <aside className="w-full lg:w-64 space-y-2">
-        <div className="bg-card dark:bg-slate-800 p-4 rounded-2xl border border-border mb-6">
+      {/* Sidebar - Desktop Only */}
+      <aside className="hidden lg:block w-64 space-y-2 shrink-0">
+        <div className="bg-card dark:bg-card p-4 rounded-2xl border border-border mb-6">
           <div className="flex items-center gap-3">
             <img 
               src={userInfo.profileImage || `https://ui-avatars.com/api/?name=${userInfo.name}&background=random`} 
@@ -302,7 +447,7 @@ const DashboardScreen = () => {
         {sidebarItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => { setActiveTab(item.id); speakGuide(item.id); }}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
               activeTab === item.id 
                 ? 'bg-primary text-white shadow-lg shadow-primary/20' 
@@ -317,15 +462,17 @@ const DashboardScreen = () => {
       {/* Main Content */}
       <div className="flex-grow space-y-6">
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl md:text-3xl font-black text-foreground dark:text-white capitalize">
-            {activeTab} <span className="text-primary">.</span>
+          <h1 className="text-2xl md:text-4xl font-black text-foreground dark:text-white capitalize">
+            {activeTab === 'overview' ? 'Dashboard' : activeTab === 'products' ? 'My Mandi' : activeTab} <span className="text-primary">.</span>
           </h1>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-secondary text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-secondary/90 transition-all shadow-xl shadow-secondary/20"
-          >
-            <PlusCircle size={16} /> Add Product
-          </button>
+          {activeTab === 'products' && (
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 bg-secondary text-white px-6 py-4 rounded-2xl text-sm font-black hover:bg-secondary/90 transition-all shadow-xl shadow-secondary/20"
+            >
+              <PlusCircle size={18} /> Launch New Product
+            </button>
+          )}
         </header>
 
         <AnimatePresence mode="wait">
@@ -337,13 +484,14 @@ const DashboardScreen = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[
-                  { label: 'Total Earnings', value: `₹${(totalEarnings || 0).toLocaleString()}`, icon: <TrendingUp size={18}/>, trend: '+12%', color: 'text-green-500', bg: 'bg-green-500/10' },
+                  { label: 'Gross Earnings', value: `₹${grossEarnings.toLocaleString()}`, icon: <TrendingUp size={18}/>, trend: '+12%', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                  { label: 'Net Profit', value: `₹${netProfit.toLocaleString()}`, icon: <TrendingUp size={18}/>, trend: 'Net', color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
                   { label: 'Active Orders', value: orders.length, icon: <ShoppingCart size={18}/>, trend: `+${orders.length > 0 ? 1 : 0}`, color: 'text-blue-500', bg: 'bg-blue-500/10' },
                   { label: 'My Products', value: products.length, icon: <Package size={18}/>, trend: 'Stable', color: 'text-amber-500', bg: 'bg-amber-500/10' },
                 ].map((stat, idx) => (
-                  <div key={idx} className="bg-card dark:bg-slate-800 p-6 rounded-3xl border border-border shadow-sm group hover:border-primary transition-all">
+                  <div key={idx} className="bg-card dark:bg-card p-6 rounded-3xl border border-border shadow-sm group hover:border-primary transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
                         {stat.icon}
@@ -356,6 +504,46 @@ const DashboardScreen = () => {
                     <h3 className="text-xl md:text-2xl font-black text-foreground dark:text-white mt-0.5">{stat.value}</h3>
                   </div>
                 ))}
+              </div>
+
+              {/* Profit Breakdown Section */}
+              <div className="bg-white dark:bg-card rounded-[2.5rem] border border-border dark:border-slate-700 p-6 md:p-10 shadow-sm">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">Earnings Breakdown</h2>
+                    <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Transparency on platform fees and deductions</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowProfitBreakdown(!showProfitBreakdown)}
+                    className="px-6 py-3 bg-primary/10 text-primary rounded-xl font-bold hover:bg-primary hover:text-white transition-all text-sm"
+                  >
+                    {showProfitBreakdown ? 'Hide Details' : 'View Details'}
+                  </button>
+                </div>
+
+                {showProfitBreakdown && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                  >
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-3xl border border-border dark:border-slate-700">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gross Sales</p>
+                      <h4 className="text-2xl font-black text-slate-900 dark:text-white">₹{grossEarnings.toLocaleString()}</h4>
+                      <p className="text-xs text-slate-500 mt-2">Total amount from all orders before any deductions.</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-500/5 p-6 rounded-3xl border border-red-100 dark:border-red-500/20">
+                      <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Deductions (8%)</p>
+                      <h4 className="text-2xl font-black text-red-600 dark:text-red-400">- ₹{(grossEarnings * 0.08).toLocaleString()}</h4>
+                      <p className="text-xs text-red-500/70 mt-2">Krisho platform commission (8%) and delivery adjustments.</p>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-500/5 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-500/20">
+                      <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Net Payout</p>
+                      <h4 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">₹{netProfit.toLocaleString()}</h4>
+                      <p className="text-xs text-emerald-500/70 mt-2">Final amount that will be credited to your account.</p>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {newOrderAlert && (
@@ -506,14 +694,71 @@ const DashboardScreen = () => {
                     </div>
                     <div className="flex items-center gap-8">
                       <p className="font-black text-xl text-foreground dark:text-white">₹{order.totalPrice}</p>
-                      <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                        order.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {order.isPaid ? 'Paid' : 'Pending'}
-                      </span>
+                      <div className="flex flex-col gap-2 items-end">
+                        <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                          order.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {order.isPaid ? 'Paid' : 'Pending'}
+                        </span>
+                        <button 
+                          onClick={() => handlePrintOrder(order)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold hover:bg-primary hover:text-white transition-colors"
+                        >
+                          <Printer size={12} /> Print Receipt
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <motion.div key="reviews" className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 rounded-[3rem] border border-border dark:border-slate-700 overflow-hidden shadow-sm">
+                <div className="p-8 border-b border-border dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                  <div>
+                    <h2 className="text-xl font-black text-foreground dark:text-white">Customer Feedback</h2>
+                    <p className="text-sm text-slate-500 mt-1">What buyers are saying about your service</p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl shadow-sm border border-border">
+                    <Star className="text-secondary" fill="currentColor" size={20} />
+                    <span className="text-lg font-black text-slate-900 dark:text-white">{userInfo.rating ? Number(userInfo.rating).toFixed(1) : '0.0'}</span>
+                    <span className="text-xs text-slate-400 font-bold">/ 5.0</span>
+                  </div>
+                </div>
+                <div className="divide-y divide-border dark:divide-slate-700">
+                  {supplierReviews.length === 0 ? (
+                    <div className="p-20 text-center text-slate-400">
+                      <div className="bg-slate-50 dark:bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageCircle size={24} />
+                      </div>
+                      <p className="font-bold">No reviews yet.</p>
+                      <p className="text-xs">Deliver quality products to earn your first rating!</p>
+                    </div>
+                  ) : supplierReviews.map((review) => (
+                    <div key={review._id} className="p-8 flex flex-col md:flex-row md:items-start justify-between gap-6 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg font-black shrink-0">
+                          {review.consumerName?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h4 className="font-black text-slate-900 dark:text-white">{review.consumerName}</h4>
+                            <div className="flex items-center gap-0.5 text-secondary">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={10} fill={i < review.rating ? 'currentColor' : 'none'} />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">"{review.comment}"</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-400 font-bold whitespace-nowrap">{new Date(review.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           )}

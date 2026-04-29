@@ -78,15 +78,19 @@ export const generateChatResponse = async (message, history = []) => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
+    const languageInstruction = preferredLanguage === 'hi' 
+      ? "The user prefers Hindi. Respond in Hindi unless asked otherwise."
+      : "The user prefers English. Respond in English unless asked otherwise.";
+
     const chat = model.startChat({
       history: [
         {
           role: "user",
-          parts: [{ text: "You are the official AI Assistant for Krisho, an Indian agricultural marketplace that connects farmers directly with consumers. Answer briefly, politely, and accurately. You understand farming, crop pricing, logistics, and marketplace instructions." }]
+          parts: [{ text: `You are the official AI Assistant for Krisho, an Indian agricultural marketplace. ${languageInstruction} You MUST support both Hindi and English. If the user writes in a specific language, follow that. If they mix, use Hinglish. Always answer briefly, politely, and accurately. You understand farming, crop pricing, Indian government schemes for farmers, logistics, and marketplace instructions.` }]
         },
         {
           role: "model",
-          parts: [{ text: "Namaste! I am the Krisho AI Helper. How can I support you today?" }]
+          parts: [{ text: preferredLanguage === 'hi' ? "नमस्ते! मैं कृषो एआई सहायक हूँ। मैं आपकी कैसे मदद कर सकता हूँ?" : "Namaste! I am the Krisho AI Helper. How can I assist you today?" }]
         },
         ...history
       ]

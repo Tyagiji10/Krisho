@@ -6,12 +6,14 @@ import { addToCart, removeFromCart } from '../store/slices/cartSlice';
 import { toggleWishlist } from '../store/slices/wishlistSlice';
 import { useState } from 'react';
 import ChatWindow from './ChatWindow';
+import ReviewModal from './ReviewModal';
 
 const ProductCard = ({ product, viewMode = 'grid' }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [added, setAdded] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
   const { cartItems } = useSelector(state => state.cart);
   const { items: wishlistItems } = useSelector(state => state.wishlist);
   
@@ -102,10 +104,13 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
           <h3 className="text-sm md:text-xl font-black text-foreground dark:text-white group-hover:text-primary transition-colors leading-tight">
             <Link to={`/product/${product._id}`}>{product.name}</Link>
           </h3>
-          <div className="flex items-center gap-0.5 text-secondary font-bold shrink-0 text-xs md:text-base">
+          <button 
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowReviews(true); }}
+            className="flex items-center gap-0.5 text-secondary font-bold shrink-0 text-xs md:text-base hover:scale-105 transition-transform"
+          >
             <Star size={12} fill="currentColor" />
-            <span>{product.rating || 'New'}</span>
-          </div>
+            <span>{product.rating ? Number(product.rating).toFixed(1) : 'New'}</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[10px] md:text-sm">
@@ -173,7 +178,14 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
               </button>
             )}
           </div>
-        </div>
+        {showReviews && (
+          <ReviewModal 
+            supplierId={product.supplier?._id || product.supplier} 
+            supplierName={product.supplier?.name || 'Agri Farmer'} 
+            onClose={() => setShowReviews(false)} 
+          />
+        )}
+          </div>
       </div>
     </div>
   );

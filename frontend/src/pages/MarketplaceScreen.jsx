@@ -115,6 +115,13 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
     setPullY(0);
   };
 
+  // Auto-refresh when userInfo location becomes available
+  useEffect(() => {
+    if (userInfo?.city || userInfo?.state) {
+      fetchProducts(false);
+    }
+  }, [userInfo?.city, userInfo?.state, fetchProducts]);
+
   const removeFilter = (key) => {
     if (key === 'sort') setSortBy('smart');
     if (key === 'min') setMinPrice('');

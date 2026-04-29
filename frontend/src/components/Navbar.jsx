@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   Home,
@@ -26,7 +26,9 @@ import {
   ArrowRight,
   TrendingUp,
   Camera,
-  ScanLine
+  ScanLine,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +39,7 @@ import LocationModal from './LocationModal';
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const suggestionRef = useRef(null);
   const profileRef = useRef(null);
@@ -53,9 +56,114 @@ const Navbar = () => {
   const [isListening, setIsListening] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
+    const stored = localStorage.getItem('voiceEnabled');
+    return stored === null ? true : stored === 'true';
+  });
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  const toggleVoice = () => {
+    const newVal = !isVoiceEnabled;
+    setIsVoiceEnabled(newVal);
+    localStorage.setItem('voiceEnabled', newVal);
+    if (newVal) {
+      speak(i18n.language.startsWith('hi') ? 'वॉयस गाइडेंस इनेबल हो गया है।' : 'Voice guidance enabled.');
+    } else {
+      window.speechSynthesis.cancel();
+    }
+  };
+
   const { userInfo } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
+
+  // Pre-load voices for speech synthesis
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+    }
+  }, []);
+
+  // Voice Instruction Logic
+  useEffect(() => {
+    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    let messageKey = '';
+    const path = location.pathname;
+    
+    if (path === '/') {
+      messageKey = userInfo 
+        ? (userInfo.role === 'supplier' ? 'voice_guides.welcome_supplier' : 'voice_guides.welcome_consumer')
+        : 'voice_guides.welcome_guest';
+    } else if (path === '/login') {
+      messageKey = 'voice_guides.login';
+    } else if (path === '/register') {
+      messageKey = 'voice_guides.register';
+    } else if (path === '/marketplace') {
+      messageKey = 'voice_guides.mandi';
+    } else if (path === '/cart') {
+      messageKey = 'voice_guides.cart';
+    } else if (path === '/dashboard') {
+      const tab = new URLSearchParams(location.search).get('tab');
+      if (tab === 'products') {
+        messageKey = 'voice_guides.manage_mandi';
+      } else if (tab === 'orders') {
+        messageKey = 'voice_guides.incoming_orders';
+      } else {
+        messageKey = 'voice_guides.dashboard';
+      }
+    } else if (path === '/orders') {
+      messageKey = 'voice_guides.orders';
+    } else if (path === '/profile') {
+      messageKey = 'voice_guides.profile';
+    }
+
+    if (messageKey) {
+      const message = t(messageKey);
+      if (!message || message === messageKey) return; // Don't speak if translation missing
+      
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      
+      const voices = window.speechSynthesis.getVoices();
+      if (i18n.language.startsWith('hi')) {
+        utterance.lang = 'hi-IN';
+        const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+        if (hiVoice) utterance.voice = hiVoice;
+      } else {
+        utterance.lang = 'en-IN';
+        const enVoice = voices.find(v => v.lang.startsWith('en') && (v.lang.includes('IN') || v.name.includes('India')));
+        if (enVoice) utterance.voice = enVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    }
+  }, [location.pathname, location.search, isVoiceEnabled, userInfo, t, i18n.language]);
+
+  const speak = (text) => {
+    if (!isVoiceEnabled || !window.speechSynthesis || !text) return;
+    
+    // Ensure voices are loaded
+    const voices = window.speechSynthesis.getVoices();
+    
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    
+    if (i18n.language.startsWith('hi')) {
+      utterance.lang = 'hi-IN';
+      const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+      if (hiVoice) utterance.voice = hiVoice;
+    } else {
+      utterance.lang = 'en-IN';
+      const enVoice = voices.find(v => v.lang.startsWith('en') && (v.lang.includes('IN') || v.name.includes('India')));
+      if (enVoice) utterance.voice = enVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  };
 
   const [notifications, setNotifications] = useState([
     { id: 'welcome', title: 'Welcome to Krisho! 🌱', text: 'Start exploring fresh produce from local farmers.', type: 'welcome' }
@@ -114,7 +222,20 @@ const Navbar = () => {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -315,6 +436,12 @@ const Navbar = () => {
               {userInfo && (
                 <div className="flex md:hidden items-center gap-2">
                   <button 
+                    onClick={toggleVoice}
+                    className={`p-2 rounded-xl transition-all ${isVoiceEnabled ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-primary'}`}
+                  >
+                    {isVoiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                  </button>
+                  <button 
                     onClick={toggleDarkMode}
                     className="p-2 text-slate-500 hover:text-primary transition-colors"
                   >
@@ -336,6 +463,12 @@ const Navbar = () => {
               {/* Always Visible on Mobile (When Logged Out) or Desktop Actions */}
               {!userInfo && (
                 <div className="flex md:hidden items-center gap-3">
+                  <button 
+                    onClick={toggleVoice}
+                    className={`p-2.5 rounded-xl transition-all shadow-sm ${isVoiceEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-primary'}`}
+                  >
+                    {isVoiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                  </button>
                   <button 
                     onClick={toggleDarkMode}
                     className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-all shadow-sm"
@@ -417,7 +550,11 @@ const Navbar = () => {
             <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
               {/* Home Icon */}
               {userInfo && (
-                <Link to="/" className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group">
+                <Link 
+                  to="/" 
+                  onClick={() => speak('Going to Home')}
+                  className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group"
+                >
                   <Home size={20} />
                   <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Home</span>
                 </Link>
@@ -428,7 +565,10 @@ const Navbar = () => {
               {userInfo && (
                 <div className="relative" ref={notifRef}>
                   <button 
-                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    onClick={() => {
+                      setIsNotificationsOpen(!isNotificationsOpen);
+                      speak('Checking your notifications');
+                    }}
                     className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative"
                   >
                     <Bell size={20} />
@@ -440,8 +580,16 @@ const Navbar = () => {
               )}
 
               <button 
+                onClick={toggleVoice}
+                className={`p-2.5 rounded-xl transition-all shadow-sm hidden md:block ${isVoiceEnabled ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-primary'}`}
+                title="Toggle Voice Instructions"
+              >
+                {isVoiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              </button>
+
+              <button 
                 onClick={toggleDarkMode}
-                className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-all shadow-sm"
+                className="p-2.5 bg-slate-100 dark:bg-card rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-all shadow-sm"
               >
                 {isDark ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -466,8 +614,8 @@ const Navbar = () => {
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-4 w-64 bg-white dark:bg-slate-800 border border-border dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                      <div className="p-6 border-b border-border dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <div className="absolute right-0 mt-4 w-64 bg-white dark:bg-card border border-border dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                      <div className="p-6 border-b border-border dark:border-slate-700 bg-slate-50 dark:bg-card">
                         <p className="font-black text-slate-900 dark:text-white truncate">{userInfo.name}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{userInfo.email}</p>
                       </div>
@@ -497,10 +645,10 @@ const Navbar = () => {
             </div>
 
             {/* Mobile Delivery Bar */}
-            {userInfo && (
+            {userInfo && !isScrolled && (
               <button 
                 onClick={() => setShowLocationModal(true)}
-                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-slate-800 rounded-2xl order-3"
+                className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-200 dark:bg-card rounded-2xl order-3 animate-in fade-in slide-in-from-top-2 duration-300"
               >
                 <MapPin size={16} className="text-primary" />
                 <div className="flex items-center gap-1 text-xs font-black text-slate-700 dark:text-slate-200">

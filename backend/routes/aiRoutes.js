@@ -25,7 +25,7 @@ router.post('/describe', async (req, res) => {
 
 router.post('/chat', async (req, res) => {
   try {
-    const { message, history } = req.body;
+    const { message, history, language } = req.body;
     
     // Hard fallback in case Gemini initialization throws
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('AIzaSy_placeholder') || process.env.GEMINI_API_KEY === 'AIzaSy...') {
@@ -37,7 +37,7 @@ router.post('/chat', async (req, res) => {
       return res.json({ response: text });
     }
 
-    const response = await generateChatResponse(message, history);
+    const response = await generateChatResponse(message, history, language);
     res.json({ response });
   } catch (error) {
     console.error("AI Chat Endpoint Error:", error);

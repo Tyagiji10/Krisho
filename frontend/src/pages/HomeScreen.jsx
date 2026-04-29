@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -32,6 +33,7 @@ import { SkeletonStatGrid } from '../components/Skeletons';
 import RevenueChart from '../components/RevenueChart';
 
 const SupplierPortal = ({ user }) => {
+  const { t, i18n } = useTranslation();
   const { userInfo } = useSelector((state) => state.auth);
   const toast = useToast();
   const { confirm, ConfirmModalUI } = useConfirm();
@@ -355,7 +357,29 @@ const SupplierPortal = ({ user }) => {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              if (window.speechSynthesis) {
+                const voices = window.speechSynthesis.getVoices();
+                window.speechSynthesis.cancel();
+                const message = t(`portal_guides.${tab.id}`);
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                if (i18n.language === 'hi') {
+                  utterance.lang = 'hi-IN';
+                  const hiVoice = voices.find(v => v.lang.startsWith('hi') || v.name.toLowerCase().includes('hindi'));
+                  if (hiVoice) utterance.voice = hiVoice;
+                } else {
+                  utterance.lang = 'en-IN';
+                  const enVoice = voices.find(v => v.lang.startsWith('en') && (v.lang.includes('IN') || v.name.includes('India')));
+                  if (enVoice) utterance.voice = enVoice;
+                }
+                
+                window.speechSynthesis.speak(utterance);
+              }
+            }}
             className={`p-6 md:p-8 rounded-[2.2rem] border flex flex-col items-center text-center justify-center gap-3 transition-all duration-300 hover:scale-[1.03] hover:shadow-lg ${
               activeTab === tab.id 
                 ? 'bg-slate-900 dark:bg-slate-800 border-slate-900 text-white shadow-xl' 
@@ -722,26 +746,33 @@ const UserPortal = ({ user }) => {
         </div>
 
         {/* Quick Action Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Order History', icon: <History size={20}/>, link: user.role === 'supplier' ? '/dashboard?tab=orders' : '/orders', bg: 'bg-blue-500' },
-            { label: 'Dashboard', icon: <LayoutDashboard size={20}/>, link: '/dashboard', bg: 'bg-emerald-500', hide: user.role !== 'supplier' },
-            { label: 'Cart', icon: <ShoppingCart size={20}/>, link: '/cart', bg: 'bg-orange-500' },
-            { label: 'Profile', icon: <User size={20}/>, link: '/profile', bg: 'bg-indigo-500' },
+            { label: 'Order History', icon: <History size={24}/>, link: user.role === 'supplier' ? '/dashboard?tab=orders' : '/orders', bg: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
+            { label: 'Dashboard', icon: <LayoutDashboard size={24}/>, link: '/dashboard', bg: 'from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/20', hide: user.role !== 'supplier' },
+            { label: 'Cart', icon: <ShoppingCart size={24}/>, link: '/cart', bg: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-500/20' },
+            { label: 'Profile', icon: <User size={24}/>, link: '/profile', bg: 'from-purple-500 to-pink-600', shadow: 'shadow-pink-500/20' },
           ].filter(action => !action.hide).map((action, idx) => (
             <Link 
               key={idx} 
               to={action.link}
-              className="group relative overflow-hidden bg-white dark:bg-slate-800 p-3 md:p-5 flex items-center gap-3 md:gap-4 rounded-[1.2rem] md:rounded-[1.8rem] border border-border dark:border-slate-700 hover:border-primary transition-all shadow-sm"
+              className={`group relative overflow-hidden bg-white dark:bg-slate-800 p-4 md:p-6 flex flex-col justify-between h-32 md:h-40 rounded-[1.5rem] md:rounded-[2rem] border border-slate-200/60 dark:border-slate-700/60 hover:border-transparent transition-all duration-300 shadow-sm hover:shadow-2xl hover:-translate-y-1`}
             >
-              <div className={`${action.bg} w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform shadow-lg shadow-black/5`}>
-                {action.icon}
+              {/* Animated Gradient Background on Hover */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${action.bg} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+              
+              <div className="flex justify-between items-start relative z-10">
+                <div className={`bg-gradient-to-br ${action.bg} w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center text-white shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-lg ${action.shadow}`}>
+                  {action.icon}
+                </div>
+                <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:bg-white dark:group-hover:bg-slate-800 transition-colors shadow-inner">
+                  <ArrowRight className="text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white group-hover:-rotate-45 transition-all duration-300" size={14} />
+                </div>
               </div>
-              <div className="flex flex-col">
-                <p className="font-black text-[9px] md:text-sm text-slate-900 dark:text-white leading-tight uppercase tracking-tight">{action.label}</p>
-                <span className="text-[8px] md:text-[10px] text-slate-400 font-bold group-hover:text-primary transition-colors">View All</span>
+              <div className="flex flex-col relative z-10 mt-auto">
+                <p className="font-black text-xs md:text-sm text-slate-900 dark:text-white leading-tight uppercase tracking-widest">{action.label}</p>
+                <span className="text-[10px] md:text-xs text-slate-400 font-bold group-hover:text-primary transition-colors mt-1">Manage & View</span>
               </div>
-              <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-200 group-hover:text-primary group-hover:translate-x-1 transition-all hidden md:block" size={14} />
             </Link>
           ))}
         </div>
@@ -756,7 +787,7 @@ const UserPortal = ({ user }) => {
           </div>
         </div>
         <div className="-mx-4 md:mx-0">
-          <MarketplaceScreen isEmbedded={true} />
+          <MarketplaceScreen isEmbedded={true} key={user?._id || 'guest'} />
         </div>
       </section>
     </div>

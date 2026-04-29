@@ -26,7 +26,7 @@ function App() {
   useEffect(() => {
     const isDark = localStorage.getItem('darkMode') === 'true';
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     if (isDark || (localStorage.getItem('darkMode') === null && systemDark)) {
       document.documentElement.classList.add('dark');
       if (localStorage.getItem('darkMode') === null) {
@@ -38,9 +38,14 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background dark:bg-slate-900 transition-colors duration-300 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col transition-colors duration-300 overflow-x-hidden relative">
+      {/* Agricultural Doodle Pattern Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.15] dark:opacity-[0.25] dark:invert dark:hue-rotate-180 brightness-100 dark:brightness-[2] dark:contrast-[1.5]"
+           style={{ backgroundImage: "url('/agri_doodle_pattern_1777442677675.png')", backgroundRepeat: 'repeat', backgroundSize: '500px' }}>
+      </div>
+
       <Navbar />
-      <main className={`flex-grow container mx-auto px-2 md:px-6 pb-24 md:pb-12 ${userInfo ? (userInfo.role === 'supplier' ? 'pt-[110px] md:pt-28' : 'pt-[180px] md:pt-28') : 'pt-24 md:pt-28'}`}>
+      <main className={`flex-grow container mx-auto px-2 md:px-6 pb-16 md:pb-12 ${userInfo ? (userInfo.role === 'supplier' ? 'pt-[110px] md:pt-28' : 'pt-[180px] md:pt-28') : 'pt-24 md:pt-28'}`}>
         <Routes>
           <Route path="/" element={<HomeScreen />} />
           <Route path="/marketplace" element={<MarketplaceScreen />} />

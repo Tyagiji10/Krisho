@@ -90,6 +90,14 @@ export const getProducts = async (req, res, next) => {
       products = products.filter(p => p.category.toLowerCase() === categoryText.toLowerCase());
     }
 
+    // Location based strict auto filter for consumers
+    if (userCity) {
+      products = products.filter(p => {
+        const pCity = p.city || p.supplier?.city || '';
+        return pCity.toLowerCase() === userCity.toLowerCase();
+      });
+    }
+
     // Price range filter
     if (minPrice !== null) products = products.filter(p => p.price >= minPrice);
     if (maxPrice !== null) products = products.filter(p => p.price <= maxPrice);
