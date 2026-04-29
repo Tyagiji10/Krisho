@@ -248,24 +248,27 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.length > 2) {
-      const fetchSuggestions = async () => {
-        try {
-          const { data } = await axios.get(`/api/products?keyword=${searchQuery}`);
-          setSuggestions(data.products.slice(0, 5));
-          setShowSuggestions(true);
-        } catch (error) {
-          console.error('Error fetching suggestions', error);
-        }
-      };
-      const delayDebounceFn = setTimeout(() => {
-        fetchSuggestions();
-      }, 300);
-      return () => clearTimeout(delayDebounceFn);
-    } else {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
+      return;
     }
+
+    const fetchSuggestions = async () => {
+      try {
+        const { data } = await axios.get(`/api/products?keyword=${searchQuery}`);
+        setSuggestions(data.products.slice(0, 5));
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Error fetching suggestions', error);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
   const handleLogout = () => {
@@ -283,25 +286,6 @@ const Navbar = () => {
       document.documentElement.classList.remove('dark');
     }
   };
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    const delayDebounceFn = setTimeout(async () => {
-      try {
-        const { data } = await axios.get(`/api/products?keyword=${searchQuery}`);
-        setSuggestions(data.products.slice(0, 5));
-        setShowSuggestions(true);
-      } catch (err) {
-        console.error("Failed to fetch suggestions", err);
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
 
   const handleSearch = (e) => {
     e?.preventDefault();
@@ -337,8 +321,8 @@ const Navbar = () => {
     };
     recognition.lang = langMap[i18n.language] || 'en-IN';
     recognition.interimResults = true;
-    recognition.continuous = true;
-    recognition.maxAlternatives = 5;
+    recognition.continuous = false; // Stop after first command for better search accuracy
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -362,16 +346,15 @@ const Navbar = () => {
         setSearchQuery(currentTranscript);
       }
 
-      // If we have a final result, we set a small timeout to auto-search 
+      // Automatically search when a final result is captured
       if (finalTranscript.trim()) {
         const sanitized = finalTranscript.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, ' ').trim();
-        const timeoutId = setTimeout(() => {
+        setTimeout(() => {
           navigate(`/marketplace?keyword=${sanitized}`);
           setShowSuggestions(false);
-          setSearchQuery('');
+          setIsListening(false);
           recognition.stop();
-        }, 800);
-        return () => clearTimeout(timeoutId);
+        }, 500);
       }
     };
 

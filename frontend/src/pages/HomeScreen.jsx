@@ -359,7 +359,8 @@ const SupplierPortal = ({ user }) => {
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id);
-              if (window.speechSynthesis) {
+              const isEnabled = localStorage.getItem('voiceEnabled') !== 'false';
+              if (window.speechSynthesis && isEnabled) {
                 const voices = window.speechSynthesis.getVoices();
                 window.speechSynthesis.cancel();
                 const message = t(`portal_guides.${tab.id}`);

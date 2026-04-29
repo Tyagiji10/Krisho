@@ -19,7 +19,8 @@ const BottomNavbar = () => {
   if (!userInfo) return null;
 
   const speak = (text) => {
-    if (!window.speechSynthesis || !text) return;
+    const isEnabled = localStorage.getItem('voiceEnabled') !== 'false';
+    if (!isEnabled || !window.speechSynthesis || !text) return;
     
     // Ensure voices are loaded
     const voices = window.speechSynthesis.getVoices();

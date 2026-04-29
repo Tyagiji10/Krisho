@@ -394,7 +394,8 @@ const DashboardScreen = () => {
 
   // Voice Guide: speaks how each section works when clicked
   const speakGuide = (tabId) => {
-    if (!window.speechSynthesis) return;
+    const isEnabled = localStorage.getItem('voiceEnabled') !== 'false';
+    if (!isEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const message = t(`dashboard_guides.${tabId}`);
     if (message) {

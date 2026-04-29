@@ -90,7 +90,7 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
     }
   }, [keyword, page, selectedCategory, userInfo, sortBy, minPrice, maxPrice]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // Initial fetch handled by location observer effect below
 
   // Force responsive view mode when embedded
   useEffect(() => {
@@ -115,12 +115,22 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
     setPullY(0);
   };
 
-  // Auto-refresh when userInfo location becomes available
+  // Auto-refresh when userInfo location becomes available or changes
   useEffect(() => {
-    if (userInfo?.city || userInfo?.state) {
-      fetchProducts(false);
+    const userCity = userInfo?.city || '';
+    const userState = userInfo?.state || '';
+    
+    // Always fetch products when component mounts or location changes
+    fetchProducts(products.length === 0); 
+
+    // If location is detected but products are empty, retry once
+    if ((userCity || userState) && products.length === 0) {
+      const timer = setTimeout(() => {
+        fetchProducts(false);
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [userInfo?.city, userInfo?.state, fetchProducts]);
+  }, [userInfo?.city, userInfo?.state, userInfo?._id, fetchProducts]);
 
   const removeFilter = (key) => {
     if (key === 'sort') setSortBy('smart');
@@ -230,7 +240,14 @@ const MarketplaceScreen = ({ isEmbedded = false }) => {
             <Search size={32} />
           </div>
           <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">No products found</p>
-          <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1">Try adjusting your filters or search terms.</p>
+          <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-1 mb-6 font-medium">Add/Refresh your location to see your nearest products.</p>
+          <button 
+            onClick={() => fetchProducts()}
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl font-black text-sm mx-auto shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <RefreshCw size={18} />
+            Refresh Products
+          </button>
         </div>
       ) : (
         <>
