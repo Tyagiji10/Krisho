@@ -59,7 +59,11 @@ const BottomNavbar = () => {
     },
     { 
       id: 'ai-chat', 
-      icon: <div className="p-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/30"><Sparkles size={18} /></div>, 
+      icon: (
+        <div className="p-2.5 bg-primary text-white rounded-2xl shadow-lg shadow-primary/30 ring-4 ring-primary/10">
+          <Sparkles size={20} strokeWidth={2.0} />
+        </div>
+      ), 
       label: 'AI Helper',
       isAction: true,
       voice: 'nav_guides.ai'
@@ -99,20 +103,20 @@ const BottomNavbar = () => {
 
   return (
     <div 
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.05)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_-15px_rgba(0,0,0,0.1)]"
     >
-      <div className="flex justify-around items-center h-14">
+      <div className="grid grid-cols-5 items-center h-16">
         {navItems.map((item) => (
           item.isAction ? (
             <button
               key={item.id}
               onClick={handleAIChatClick}
-              className="flex flex-col items-center gap-0.5 px-1 text-slate-500 dark:text-slate-400"
+              className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400 h-full"
             >
-              <div className="scale-90">
+              <div className="transition-transform active:scale-95 transform -translate-y-1">
                 {item.icon}
               </div>
-              <span className="text-[9px] font-medium tracking-tight">{item.label}</span>
+              <span className="text-[10px] font-bold tracking-tight opacity-80">{item.label}</span>
             </button>
           ) : (
             <Link
@@ -125,16 +129,18 @@ const BottomNavbar = () => {
                   alert('Supplier accounts are restricted from accessing purchasing workflows.');
                 }
               }}
-              className={`flex flex-col items-center gap-0.5 px-1 transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 h-full transition-all ${
                 location.pathname === item.id 
-                  ? 'text-slate-900 dark:text-white' 
-                  : 'text-slate-500 dark:text-slate-400'
+                  ? 'text-primary' 
+                  : 'text-slate-400 dark:text-slate-500 hover:text-primary'
               }`}
             >
-              <div className="scale-90">
+              <div className={`transition-all duration-300 ${location.pathname === item.id ? 'scale-110 -translate-y-1' : 'active:scale-90'}`}>
                 {item.icon}
               </div>
-              <span className="text-[9px] font-medium tracking-tight">{item.label}</span>
+              <span className={`text-[10px] font-bold tracking-tight transition-all ${location.pathname === item.id ? 'opacity-100' : 'opacity-60'}`}>
+                {item.label}
+              </span>
             </Link>
           )
         ))}

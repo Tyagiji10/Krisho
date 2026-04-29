@@ -66,10 +66,19 @@ const Navbar = () => {
     const newVal = !isVoiceEnabled;
     setIsVoiceEnabled(newVal);
     localStorage.setItem('voiceEnabled', newVal);
-    if (newVal) {
-      speak(i18n.language.startsWith('hi') ? 'वॉयस गाइडेंस इनेबल हो गया है।' : 'Voice guidance enabled.');
-    } else {
-      window.speechSynthesis.cancel();
+    
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel(); // Stop any current speech
+      
+      if (newVal) {
+        // Only speak the confirmation if turning ON
+        const message = i18n.language.startsWith('hi') 
+          ? 'वॉयस गाइडेंस इनेबल हो गया है।' 
+          : 'Voice guidance enabled.';
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.lang = i18n.language.startsWith('hi') ? 'hi-IN' : 'en-IN';
+        window.speechSynthesis.speak(utterance);
+      }
     }
   };
 
