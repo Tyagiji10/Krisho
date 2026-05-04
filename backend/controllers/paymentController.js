@@ -2,11 +2,28 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { db } from '../config/firebaseAdmin.js';
 
-// Initialize Razorpay (using test fallback keys if not in env)
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'placeholder_secret',
-});
+// Lazy initialization of Razorpay to ensure env vars are loaded
+let razorpayInstance = null;
+const getRazorpay = () => {
+  if (!razorpayInstance) {
+    const key_id = process.env.RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!key_id || key_id === 'rzp_test_placeholder' || key_id === 'your_razorpay_key_id') {
+      console.log('⚠️  Razorpay keys missing or using placeholders. Entering Mock Mode.');
+      console.log('DEBUG: key_id is:', key_id);
+      return null;
+    }
+
+    console.log(`✅ Razorpay initialized with key starting with: ${key_id.substring(0, 8)}...`);
+    razorpayInstance = new Razorpay({
+      key_id,
+      key_secret,
+    });
+    console.log('✅ Razorpay initialized with real keys.');
+  }
+  return razorpayInstance;
+};
 
 // @desc    Create Razorpay order
 // @route   POST /api/payment/create-order
@@ -50,12 +67,10 @@ export const createRazorpayOrder = async (req, res, next) => {
       }
     }
 
-    // If using mock placeholders, bypass external API
-    if (
-      !process.env.RAZORPAY_KEY_ID || 
-      process.env.RAZORPAY_KEY_ID === 'rzp_test_placeholder' || 
-      process.env.RAZORPAY_KEY_ID === 'your_razorpay_key_id'
-    ) {
+    const rzp = getRazorpay();
+
+    // If using mock placeholders or keys missing, bypass external API
+    if (!rzp) {
       return res.status(201).json({
         id: `order_mock_${Date.now()}`,
         amount: options.amount,
@@ -65,7 +80,7 @@ export const createRazorpayOrder = async (req, res, next) => {
       });
     }
 
-    const order = await razorpay.orders.create(options);
+    const order = await rzp.orders.create(options);
     res.status(201).json(order);
   } catch (error) {
     next(error);

@@ -1,15 +1,15 @@
+import './config/env.js';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import compression from 'compression';
 import { Server } from 'socket.io';
 import http from 'http';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { db } from './config/firebaseAdmin.js';
 
-// Load environment variables from both backend and root directories
-dotenv.config({ path: path.resolve(process.cwd(), 'backend', '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
@@ -101,13 +101,12 @@ app.use((err, req, res, next) => {
 
 // Start Server
 if (!process.env.VERCEL) {
-  const __dirname = path.resolve();
 
   if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'frontend/dist')));
+    app.use(express.static(path.join(__dirname, '..', 'frontend/dist')));
 
     app.get('/*splat', (req, res) =>
-      res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'))
+      res.sendFile(path.resolve(__dirname, '..', 'frontend', 'dist', 'index.html'))
     );
   } else {
     app.get('/', (req, res) => {
