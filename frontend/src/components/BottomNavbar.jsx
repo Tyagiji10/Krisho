@@ -6,7 +6,10 @@ import {
   PackageCheck,
   ShoppingCart,
   Menu,
-  Sparkles
+  Sparkles,
+  MessageCircle,
+  TrendingUp,
+  Heart
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -55,7 +58,7 @@ const BottomNavbar = () => {
     { 
       id: isSupplier ? '/dashboard?tab=products' : '/orders', 
       icon: isSupplier ? <Menu size={22} strokeWidth={1.5} /> : <PackageCheck size={22} strokeWidth={1.5} />, 
-      label: isSupplier ? 'Manage Mandi' : 'Orders',
+      label: isSupplier ? 'Mandi' : 'Orders',
       voice: isSupplier ? 'nav_guides.mandi' : 'nav_guides.orders'
     },
     { 
@@ -70,10 +73,16 @@ const BottomNavbar = () => {
       voice: 'nav_guides.ai'
     },
     { 
-      id: isSupplier ? '/dashboard?tab=orders' : '/cart', 
+      id: isSupplier ? '/dashboard?tab=messages' : '/wishlist', 
+      icon: isSupplier ? <MessageCircle size={22} strokeWidth={1.5} /> : <Heart size={22} strokeWidth={1.5} />, 
+      label: isSupplier ? 'Messages' : 'Wishlist',
+      voice: isSupplier ? 'nav_guides.messages' : 'nav_guides.wishlist'
+    },
+    { 
+      id: isSupplier ? '/dashboard' : '/cart', 
       icon: (
         <div className="relative">
-          {isSupplier ? <PackageCheck size={22} strokeWidth={1.5} /> : <ShoppingCart size={22} strokeWidth={1.5} />}
+          {isSupplier ? <TrendingUp size={22} strokeWidth={1.5} /> : <ShoppingCart size={22} strokeWidth={1.5} />}
           {!isSupplier && cartItems.length > 0 && (
             <span className="absolute -top-1 -right-1 bg-primary text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">
               {cartItems.length}
@@ -81,19 +90,8 @@ const BottomNavbar = () => {
           )}
         </div>
       ), 
-      label: isSupplier ? 'Incoming' : 'Cart',
-      voice: isSupplier ? 'nav_guides.incoming' : 'nav_guides.cart'
-    },
-    { 
-      id: '/profile', 
-      icon: (
-        <div className="relative">
-          <User size={22} strokeWidth={1.5} />
-          <span className="absolute top-0 right-0 w-2 h-2 bg-pink-500 rounded-full border border-white dark:border-slate-900"></span>
-        </div>
-      ), 
-      label: 'You',
-      voice: 'nav_guides.profile'
+      label: isSupplier ? 'Earnings' : 'Cart',
+      voice: isSupplier ? 'nav_guides.earnings' : 'nav_guides.cart'
     },
   ];
 
@@ -131,15 +129,15 @@ const BottomNavbar = () => {
                 }
               }}
               className={`flex flex-col items-center justify-center gap-1 h-full transition-all ${
-                location.pathname === item.id 
+                location.pathname === item.id.split('?')[0] && (item.id.includes('?') ? location.search === '?' + item.id.split('?')[1] : location.search === '')
                   ? 'text-primary' 
                   : 'text-slate-400 dark:text-slate-500 hover:text-primary'
               }`}
             >
-              <div className={`transition-all duration-300 ${location.pathname === item.id ? 'scale-110 -translate-y-1' : 'active:scale-90'}`}>
+              <div className={`transition-all duration-300 ${location.pathname === item.id.split('?')[0] && (item.id.includes('?') ? location.search === '?' + item.id.split('?')[1] : location.search === '') ? 'scale-110 -translate-y-1' : 'active:scale-90'}`}>
                 {item.icon}
               </div>
-              <span className={`text-[10px] font-bold tracking-tight transition-all ${location.pathname === item.id ? 'opacity-100' : 'opacity-60'}`}>
+              <span className={`text-[10px] font-bold tracking-tight transition-all ${location.pathname === item.id.split('?')[0] && (item.id.includes('?') ? location.search === '?' + item.id.split('?')[1] : location.search === '') ? 'opacity-100' : 'opacity-60'}`}>
                 {item.label}
               </span>
             </Link>

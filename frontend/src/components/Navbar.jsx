@@ -28,12 +28,15 @@ import {
   Camera,
   ScanLine,
   Volume2,
-  VolumeX
+  VolumeX,
+  MessageSquare,
+  Heart
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { logout } from '../store/slices/authSlice';
+import { clearWishlist } from '../store/slices/wishlistSlice';
 import LocationModal from './LocationModal';
 
 const Navbar = () => {
@@ -43,6 +46,7 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const suggestionRef = useRef(null);
   const profileRef = useRef(null);
+  const profileRefMobile = useRef(null);
   const notifRef = useRef(null);
   const notifRefMobile = useRef(null);
 
@@ -179,35 +183,63 @@ const Navbar = () => {
   ]);
 
   useEffect(() => {
-    if (userInfo?.role === 'supplier') {
-      const fetchOrdersForNotifications = async () => {
-        try {
-          const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-          const { data } = await axios.get('/api/orders/supplier', config);
-          
-          const orderNotifs = data.map(order => ({
-            id: order._id,
-            title: `📦 New Order #${order._id.slice(-6)}`,
-            text: `Received order for ${order.orderItems[0].name} (Qty: ${order.orderItems[0].qty} ${order.orderItems[0].unit || 'kg'}) - ₹${order.totalPrice}`,
-            time: new Date(order.createdAt),
-            type: 'order'
-          }));
+    if (!userInfo) return;
 
-          orderNotifs.sort((a, b) => b.time - a.time);
-          
-          setNotifications(prev => {
-            const welcome = prev.filter(n => n.type === 'welcome');
-            return [...welcome, ...orderNotifs];
-          });
-        } catch (err) {
-          console.error("Error fetching orders for notifications", err);
+    const fetchNotificationsData = async () => {
+      try {
+        const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+        const allNewNotifs = [];
+
+        // 1. Fetch Orders (Suppliers only)
+        if (userInfo.role === 'supplier') {
+          try {
+            const { data: orderData } = await axios.get('/api/orders/supplier', config);
+            const orderNotifs = orderData.map(order => ({
+              id: `order_${order._id}`,
+              title: `📦 New Order #${order._id.slice(-6)}`,
+              text: `Received order for ${order.orderItems[0].name} (Qty: ${order.orderItems[0].qty} ${order.orderItems[0].unit || 'kg'}) - ₹${order.totalPrice}`,
+              time: new Date(order.createdAt),
+              type: 'order'
+            }));
+            allNewNotifs.push(...orderNotifs);
+          } catch (e) { console.error("Order notifs failed", e); }
         }
-      };
 
-      fetchOrdersForNotifications();
-      const interval = setInterval(fetchOrdersForNotifications, 30000);
-      return () => clearInterval(interval);
-    }
+        // 2. Fetch Conversations/Messages (Everyone)
+        try {
+          const { data: convData } = await axios.get('/api/messages/conversations', config);
+          const chatNotifs = convData.map(conv => ({
+            id: `chat_${conv._id}`,
+            title: `💬 Message from ${conv.otherUserName}`,
+            text: conv.lastMessage,
+            time: new Date(conv.createdAt),
+            type: 'chat',
+            otherUserId: conv.otherUserId
+          }));
+          allNewNotifs.push(...chatNotifs);
+        } catch (e) { console.error("Chat notifs failed", e); }
+
+        setNotifications(prev => {
+          const welcome = prev.filter(n => n.type === 'welcome');
+          const combined = [...welcome, ...allNewNotifs];
+          
+          // Deduplicate by ID and sort by time
+          const uniqueMap = new Map();
+          combined.forEach(n => uniqueMap.set(n.id, n));
+          
+          return Array.from(uniqueMap.values())
+            .sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0))
+            .slice(0, 10);
+        });
+
+      } catch (err) {
+        console.error("Error fetching notifications", err);
+      }
+    };
+
+    fetchNotificationsData();
+    const interval = setInterval(fetchNotificationsData, 10000); // Check every 10s
+    return () => clearInterval(interval);
   }, [userInfo]);
 
   useEffect(() => {
@@ -223,7 +255,8 @@ const Navbar = () => {
       if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
         setShowSuggestions(false);
       }
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
+      if (profileRef.current && !profileRef.current.contains(event.target) && 
+          (!profileRefMobile.current || !profileRefMobile.current.contains(event.target))) {
         setIsDropdownOpen(false);
       }
       if (notifRef.current && !notifRef.current.contains(event.target) && (!notifRefMobile.current || !notifRefMobile.current.contains(event.target))) {
@@ -273,6 +306,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     dispatch(logout());
+    dispatch(clearWishlist());
     setIsDropdownOpen(false);
   };
 
@@ -449,6 +483,44 @@ const Navbar = () => {
                     </button>
                     {isNotificationsOpen && <NotificationDropdown />}
                   </div>
+
+                  {/* Mobile Profile Dropdown */}
+                  <div className="relative" ref={profileRefMobile}>
+                    <button 
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="flex items-center group ml-1"
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-black shadow-lg shadow-primary/20 overflow-hidden">
+                        {userInfo.profileImage ? (
+                          <img src={userInfo.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          userInfo.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute right-0 mt-4 w-56 bg-white dark:bg-card border border-border dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 z-[80]">
+                        <div className="p-4 border-b border-border dark:border-slate-700 bg-slate-50 dark:bg-card">
+                          <p className="font-black text-slate-900 dark:text-white truncate text-xs">{userInfo.name}</p>
+                        </div>
+                        <div className="p-2">
+                          <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-xs">
+                            <User size={16} /> Profile
+                          </Link>
+                          <Link to="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-xs">
+                            <PackageCheck size={16} /> Orders
+                          </Link>
+                          <Link to="/wishlist" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-xs">
+                            <Heart size={16} /> Wishlist
+                          </Link>
+                          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 transition-all font-bold text-xs text-left">
+                            <LogOut size={16} /> Logout
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -552,6 +624,28 @@ const Navbar = () => {
                 </Link>
               )}
 
+              {userInfo && (
+                <Link 
+                  to="/wishlist" 
+                  onClick={() => speak('Viewing your wishlist')}
+                  className="p-2.5 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all relative group"
+                >
+                  <Heart size={20} />
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Wishlist</span>
+                </Link>
+              )}
+
+              {userInfo && userInfo.role === 'supplier' && (
+                <Link 
+                  to="/dashboard?tab=messages" 
+                  onClick={() => speak('Opening your messages')}
+                  className="p-2.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all relative group"
+                >
+                  <MessageSquare size={20} />
+                  <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Messages</span>
+                </Link>
+              )}
+
 
 
               {userInfo && (
@@ -614,6 +708,9 @@ const Navbar = () => {
                       <div className="p-3">
                         <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-sm">
                           <User size={18} /> Profile Settings
+                        </Link>
+                        <Link to="/wishlist" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-sm">
+                          <Heart size={18} /> My Wishlist
                         </Link>
                         <Link to="/orders" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-5 py-3.5 rounded-xl hover:bg-primary/10 text-slate-600 dark:text-slate-300 hover:text-primary transition-all font-bold text-sm">
                           <PackageCheck size={18} /> Order History

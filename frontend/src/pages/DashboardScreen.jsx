@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ImageCropper from '../components/ImageCropper';
+import ChatWindow from '../components/ChatWindow';
 
 const DashboardScreen = () => {
   const { t, i18n } = useTranslation();
@@ -40,11 +41,10 @@ const DashboardScreen = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+    const defaultTab = userInfo?.role === 'supplier' ? 'overview' : 'messages';
+    const tab = searchParams.get('tab') || defaultTab;
+    setActiveTab(tab);
+  }, [searchParams, userInfo]);
 
   // Data States
   const [orders, setOrders] = useState([]);
@@ -59,6 +59,9 @@ const DashboardScreen = () => {
   const [editProductId, setEditProductId] = useState(null);
   const [showProfitBreakdown, setShowProfitBreakdown] = useState(false);
   const [supplierReviews, setSupplierReviews] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [isConversationsLoading, setIsConversationsLoading] = useState(false);
 
   // Form States
   const [newProduct, setNewProduct] = useState({
@@ -73,7 +76,7 @@ const DashboardScreen = () => {
   });
 
   useEffect(() => {
-    if (!userInfo || userInfo.role !== 'supplier') {
+    if (!userInfo) {
       navigate('/login');
     } else {
       fetchDashboardData();
@@ -84,24 +87,34 @@ const DashboardScreen = () => {
     setIsLoading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const [orderRes, productRes, reviewsRes] = await Promise.all([
-        axios.get(`/api/orders/supplier`, config),
-        axios.get(`/api/products?keyword=&city=${userInfo.city}`, config),
-        axios.get(`/api/reviews/${userInfo._id}`, config).catch(() => ({ data: [] }))
-      ]);
       
-      const rawProducts = productRes?.data?.products || [];
-      const rawOrders = Array.isArray(orderRes?.data) ? orderRes.data : [];
-      
-      // Filter products by current supplier
-      const myProducts = rawProducts.filter(p => {
-        const pSupplierId = p.supplier?._id || p.supplier;
-        return pSupplierId?.toString() === userInfo._id?.toString();
-      });
-      
-      setOrders(rawOrders);
-      setProducts(myProducts);
-      setSupplierReviews(reviewsRes.data);
+      let currentOrders = [];
+      if (userInfo.role === 'supplier') {
+        const [orderRes, productRes, reviewsRes] = await Promise.all([
+          axios.get(`/api/orders/supplier`, config),
+          axios.get(`/api/products?keyword=&city=${userInfo.city}`, config),
+          axios.get(`/api/reviews/${userInfo._id}`, config).catch(() => ({ data: [] }))
+        ]);
+        
+        currentOrders = Array.isArray(orderRes?.data) ? orderRes.data : [];
+        const rawProducts = productRes?.data?.products || [];
+        
+        const myProducts = rawProducts.filter(p => {
+          const pSupplierId = p.supplier?._id || p.supplier;
+          return pSupplierId?.toString() === userInfo._id?.toString();
+        });
+        
+        setOrders(currentOrders);
+        setProducts(myProducts);
+        setSupplierReviews(reviewsRes.data);
+      } else {
+        const { data: myOrders } = await axios.get('/api/orders/myorders', config);
+        currentOrders = myOrders;
+        setOrders(myOrders);
+      }
+
+      // Fetch conversations
+      fetchConversations();
 
       // Get latest user info for earnings
       try {
@@ -112,8 +125,8 @@ const DashboardScreen = () => {
       }
       
       // Simulation: Check for new orders
-      if (rawOrders.length > 0 && activeTab === 'overview') {
-        const latest = rawOrders[0];
+      if (currentOrders.length > 0 && activeTab === 'overview') {
+        const latest = currentOrders[0];
         setNewOrderAlert(latest);
       }
     } catch (error) {
@@ -123,27 +136,51 @@ const DashboardScreen = () => {
     }
   };
 
-  const grossEarnings = orders.reduce((acc, order) => {
-    const supplierTotal = (order.orderItems || [])
-      .filter(item => {
-        const supplierId = item.supplier?._id || item.supplier;
-        return supplierId?.toString() === userInfo._id?.toString();
-      })
-      .reduce((sum, item) => sum + (item.price * item.qty), 0);
-    return acc + supplierTotal;
-  }, 0);
+  const fetchConversations = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      const { data } = await axios.get('/api/messages/conversations', config);
+      setConversations(data);
+    } catch (err) {
+      console.error("Failed to fetch conversations", err);
+    } finally {
+      setIsConversationsLoading(false);
+    }
+  };
 
-  const netProfit = orders.reduce((acc, order) => {
-    const supplierTotal = (order.orderItems || [])
-      .filter(item => {
-        const supplierId = item.supplier?._id || item.supplier;
-        return supplierId?.toString() === userInfo._id?.toString();
-      })
-      .reduce((sum, item) => sum + (item.price * item.qty), 0);
-    const platformCommission = supplierTotal * 0.08;
-    const deliveryCharge = order.shippingPrice || 0;
-    return acc + Math.max(0, supplierTotal - platformCommission - deliveryCharge);
-  }, 0);
+  useEffect(() => {
+    if (userInfo && userInfo.role === 'supplier' && activeTab === 'messages') {
+      fetchConversations();
+      const interval = setInterval(fetchConversations, 5000); // Poll for new chats every 5s
+      return () => clearInterval(interval);
+    }
+  }, [userInfo, activeTab]);
+
+  const grossEarnings = orders
+    .filter(order => order.isDelivered) // Only count completed/delivered orders
+    .reduce((acc, order) => {
+      const supplierTotal = (order.orderItems || [])
+        .filter(item => {
+          const supplierId = item.supplier?._id || item.supplier;
+          return supplierId?.toString() === userInfo._id?.toString();
+        })
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
+      return acc + supplierTotal;
+    }, 0);
+
+  const netProfit = orders
+    .filter(order => order.isDelivered) // Only count profit from delivered orders
+    .reduce((acc, order) => {
+      const supplierTotal = (order.orderItems || [])
+        .filter(item => {
+          const supplierId = item.supplier?._id || item.supplier;
+          return supplierId?.toString() === userInfo._id?.toString();
+        })
+        .reduce((sum, item) => sum + (item.price * item.qty), 0);
+      const platformCommission = supplierTotal * 0.08;
+      const deliveryCharge = order.shippingPrice || 0;
+      return acc + Math.max(0, supplierTotal - platformCommission - deliveryCharge);
+    }, 0);
 
   const handlePrintOrder = (order) => {
     const printWindow = window.open('', '_blank');
@@ -418,13 +455,17 @@ const DashboardScreen = () => {
     }
   };
 
-  const sidebarItems = [
+  const sidebarItems = userInfo?.role === 'supplier' ? [
     { id: 'overview', icon: <TrendingUp size={20}/>, label: 'Overview' },
     { id: 'products', icon: <Package size={20}/>, label: 'My Products' },
     { id: 'orders', icon: <ShoppingCart size={20}/>, label: 'Orders' },
+    { id: 'messages', icon: <MessageCircle size={20}/>, label: 'Messages' },
     { id: 'reviews', icon: <Star size={20}/>, label: 'Reviews' },
     { id: 'customers', icon: <Users size={20}/>, label: 'Customers' },
     { id: 'payments', icon: <CreditCard size={20}/>, label: 'Payment Details' },
+  ] : [
+    { id: 'messages', icon: <MessageCircle size={20}/>, label: 'Messages' },
+    { id: 'orders', icon: <ShoppingCart size={20}/>, label: 'My Orders' },
   ];
 
   return (
@@ -569,43 +610,65 @@ const DashboardScreen = () => {
                 </motion.div>
               )}
 
-              <div className="bg-card dark:bg-slate-800 rounded-[3rem] border border-border dark:border-slate-700 overflow-hidden shadow-sm">
-                <div className="p-8 border-b border-border dark:border-slate-700 flex justify-between items-center">
-                  <h2 className="text-xl font-black text-foreground dark:text-white">Recent Orders</h2>
-                  <button onClick={() => setActiveTab('orders')} className="text-primary font-bold flex items-center gap-1 hover:underline">
-                    View All <ChevronRight size={18} />
-                  </button>
-                </div>
-                <div className="divide-y divide-border dark:divide-slate-700">
-                  {orders.length === 0 ? (
-                    <div className="p-12 text-center text-slate-400">No orders yet.</div>
-                  ) : orders.slice(0, 5).map((order) => (
-                    <div key={order._id} className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
-                          <img src={order.orderItems[0].image} className="w-full h-full object-cover" alt="" />
-                        </div>
-                        <div>
-                          <p className="font-black text-lg text-foreground dark:text-white">{order.orderItems[0].name}</p>
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">ID: #{order._id.slice(-6)}</p>
-                          <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
-                            <span>Qty: <strong className="text-slate-700 dark:text-slate-200">{order.orderItems[0].qty} {order.orderItems[0].unit || 'kg'}</strong></span>
-                            <span>Time: <strong className="text-slate-700 dark:text-slate-200">{new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} ({new Date(order.createdAt).toLocaleDateString()})</strong></span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <div className="bg-card dark:bg-slate-800 rounded-[3rem] border border-border dark:border-slate-700 overflow-hidden shadow-sm h-full">
+                  <div className="p-8 border-b border-border dark:border-slate-700 flex justify-between items-center">
+                    <h2 className="text-xl font-black text-foreground dark:text-white">Recent Orders</h2>
+                    <button onClick={() => setActiveTab('orders')} className="text-primary font-bold flex items-center gap-1 hover:underline">
+                      View All <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <div className="divide-y divide-border dark:divide-slate-700">
+                    {orders.length === 0 ? (
+                      <div className="p-12 text-center text-slate-400">No orders yet.</div>
+                    ) : orders.slice(0, 3).map((order) => (
+                      <div key={order._id} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <img src={order.orderItems[0].image} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                          <div>
+                            <p className="font-bold text-sm text-foreground dark:text-white">{order.orderItems[0].name}</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">₹{order.totalPrice}</p>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-8">
-                        <div className="text-right">
-                          <p className="font-black text-xl text-foreground dark:text-white">₹{order.totalPrice}</p>
-                        </div>
-                        <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                        <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${
                           order.isPaid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                         }`}>
                           {order.isPaid ? 'Paid' : 'Pending'}
                         </span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-card dark:bg-slate-800 rounded-[3rem] border border-border dark:border-slate-700 overflow-hidden shadow-sm h-full">
+                  <div className="p-8 border-b border-border dark:border-slate-700 flex justify-between items-center">
+                    <h2 className="text-xl font-black text-foreground dark:text-white">Recent Chats</h2>
+                    <button onClick={() => setActiveTab('messages')} className="text-primary font-bold flex items-center gap-1 hover:underline">
+                      View All <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <div className="divide-y divide-border dark:divide-slate-700">
+                    {conversations.length === 0 ? (
+                      <div className="p-12 text-center text-slate-400">No messages yet.</div>
+                    ) : conversations.slice(0, 3).map((conv) => (
+                      <button 
+                        key={conv.otherUserId}
+                        onClick={() => { setActiveTab('messages'); setSelectedConversation(conv); }}
+                        className="w-full p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase overflow-hidden">
+                            {conv.otherUserProfileImage ? <img src={conv.otherUserProfileImage} className="w-full h-full object-cover" alt="" /> : conv.otherUserName?.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-foreground dark:text-white">{conv.otherUserName}</p>
+                            <p className="text-[10px] text-slate-500 truncate max-w-[120px]">{conv.lastMessage}</p>
+                          </div>
+                        </div>
+                        <MessageCircle size={14} className="text-primary opacity-50" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -795,6 +858,56 @@ const DashboardScreen = () => {
                    <Users size={48} className="mx-auto text-slate-300 mb-4" />
                    <p className="text-slate-500 font-bold">No customers yet.</p>
                 </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'messages' && (
+            <motion.div key="messages" className="bg-card dark:bg-slate-800 rounded-[3rem] border border-border overflow-hidden">
+              <div className="p-8 border-b border-border flex justify-between items-center">
+                <h2 className="text-xl font-black text-foreground dark:text-white">Customer Messages</h2>
+                <button onClick={fetchConversations} className="text-xs font-bold text-primary hover:underline">Refresh</button>
+              </div>
+              <div className="divide-y divide-border">
+                {isConversationsLoading ? (
+                  <div className="p-20 text-center text-slate-400">Loading chats...</div>
+                ) : conversations.length === 0 ? (
+                  <div className="p-20 text-center text-slate-400">No active conversations found.</div>
+                ) : conversations.map((conv) => (
+                  <button 
+                    key={conv.otherUserId} 
+                    onClick={() => setSelectedConversation(conv)}
+                    className="w-full p-8 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase overflow-hidden">
+                        {conv.otherUserProfileImage ? (
+                          <img src={conv.otherUserProfileImage} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          conv.otherUserName?.charAt(0)
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-900 dark:text-white">{conv.otherUserName}</h4>
+                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{conv.lastMessage}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        {new Date(conv.createdAt).toLocaleDateString()}
+                      </p>
+                      <MessageCircle size={16} className="text-primary mt-1 inline-block" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {selectedConversation && (
+                <ChatWindow 
+                  supplierId={selectedConversation.otherUserId}
+                  supplierName={selectedConversation.otherUserName}
+                  onClose={() => setSelectedConversation(null)}
+                />
               )}
             </motion.div>
           )}

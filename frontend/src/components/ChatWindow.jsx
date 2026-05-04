@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { Send, X, MessageSquare, User, Trash2 } from 'lucide-react';
-
 import { createPortal } from 'react-dom';
 
 /**
@@ -32,7 +31,7 @@ const ChatWindow = ({ supplierId, supplierName, onClose }) => {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3000); // Fallback polling
+    const interval = setInterval(fetchMessages, 2000); // Faster polling for real-time feel
     return () => clearInterval(interval);
   }, [supplierId, userInfo]);
 
@@ -40,15 +39,22 @@ const ChatWindow = ({ supplierId, supplierName, onClose }) => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const capitalize = (text) => {
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
+
+    const formattedMessage = capitalize(newMessage.trim());
 
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
       const { data } = await axios.post('/api/messages', {
         receiverId: supplierId,
-        text: newMessage.trim(),
+        text: formattedMessage,
       }, config);
 
       setMessages([...messages, data]);
@@ -56,6 +62,18 @@ const ChatWindow = ({ supplierId, supplierName, onClose }) => {
       if (navigator.vibrate) navigator.vibrate(20);
     } catch (error) {
       console.error('Failed to send message', error);
+    }
+  };
+
+  const clearChat = async () => {
+    if (!window.confirm('Are you sure you want to clear all messages? This cannot be undone.')) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      await axios.delete(`/api/messages/${supplierId}`, config);
+      setMessages([]);
+    } catch (error) {
+      console.error('Failed to clear messages', error);
+      alert('Failed to clear messages. Please try again.');
     }
   };
 
@@ -75,7 +93,7 @@ const ChatWindow = ({ supplierId, supplierName, onClose }) => {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setMessages([])} className="p-1 rounded-lg hover:bg-white/20 transition-colors" title="Clear Chat">
+          <button onClick={clearChat} className="p-1 rounded-lg hover:bg-white/20 transition-colors" title="Clear Chat">
             <Trash2 size={18} />
           </button>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-white/20 transition-colors">
@@ -103,7 +121,7 @@ const ChatWindow = ({ supplierId, supplierName, onClose }) => {
                     ? 'bg-primary text-white rounded-br-none' 
                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-border dark:border-slate-700 rounded-bl-none'
                 }`}>
-                  {msg.text}
+                  {capitalize(msg.text)}
                 </div>
               </div>
             );

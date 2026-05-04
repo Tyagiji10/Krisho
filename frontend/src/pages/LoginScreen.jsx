@@ -43,8 +43,36 @@ const LoginScreen = () => {
 
       // 2. Fetch user profile from backend database
       const { data } = await axios.post('/api/users/login', { firebaseUid, email });
+
       dispatch(setCredentials({ ...data }));
       navigate('/');
+      
+      // 3. Attempt to auto-update location in background (non-blocking)
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const address = geoRes.data.address;
+            
+            const detectedState = address.state || address.region;
+            const detectedCity = address.city || address.town || address.village || address.suburb;
+
+            if (detectedState && detectedCity) {
+              const config = { headers: { Authorization: `Bearer ${data.token}` } };
+              const updateRes = await axios.put('/api/users/profile', { 
+                state: detectedState, 
+                city: detectedCity 
+              }, config);
+              dispatch(setCredentials({ ...updateRes.data }));
+            }
+          } catch (geoErr) {
+            console.error("Auto-location background update failed", geoErr);
+          }
+        }, (err) => {
+          console.warn("Geolocation permission denied or failed", err);
+        });
+      }
     } catch (err) {
       let message = err.response?.data?.message || err.message || 'Failed to login. Please try again.';
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
@@ -100,6 +128,33 @@ const LoginScreen = () => {
       } else {
         dispatch(setCredentials({ ...data }));
         navigate('/');
+
+        // Attempt to auto-update location in background (non-blocking)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+              const { latitude, longitude } = position.coords;
+              const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+              const address = geoRes.data.address;
+              
+              const detectedState = address.state || address.region;
+              const detectedCity = address.city || address.town || address.village || address.suburb;
+
+              if (detectedState && detectedCity) {
+                const config = { headers: { Authorization: `Bearer ${data.token}` } };
+                const updateRes = await axios.put('/api/users/profile', { 
+                  state: detectedState, 
+                  city: detectedCity 
+                }, config);
+                dispatch(setCredentials({ ...updateRes.data }));
+              }
+            } catch (geoErr) {
+              console.error("Auto-location background update failed", geoErr);
+            }
+          }, (err) => {
+            console.warn("Geolocation permission denied or failed", err);
+          });
+        }
       }
     } catch (err) {
       setError('Google Sign-In failed. Please try again.');

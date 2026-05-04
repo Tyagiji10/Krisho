@@ -2,9 +2,10 @@ import { ShoppingCart, Star, MapPin, CheckCircle, Users, Trash2, Heart, MessageS
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import { addToCart, removeFromCart } from '../store/slices/cartSlice';
-import { toggleWishlist } from '../store/slices/wishlistSlice';
-import { useState } from 'react';
+import { toggleWishlistAsync } from '../store/slices/wishlistSlice';
+import { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import ReviewModal from './ReviewModal';
 
@@ -16,9 +17,22 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
   const [showReviews, setShowReviews] = useState(false);
   const { cartItems } = useSelector(state => state.cart);
   const { items: wishlistItems } = useSelector(state => state.wishlist);
+  const { userInfo } = useSelector(state => state.auth);
   
-  const isInCart = cartItems.find(x => x.product === product._id);
-  const isWishlisted = wishlistItems.find(x => x._id === product._id);
+  const isInCart = cartItems.find(x => String(x.product) === String(product._id));
+  
+  // Robust ID matching: check if product._id exists in wishlist as either _id or productId
+  const isWishlisted = wishlistItems.some(x => 
+    String(x.productId) === String(product._id) || 
+    String(x._id) === String(product._id)
+  );
+
+  const [wishlistedLocal, setWishlistedLocal] = useState(isWishlisted);
+
+  // Sync local state when redux state changes
+  useEffect(() => {
+    setWishlistedLocal(isWishlisted);
+  }, [isWishlisted]);
 
   const [qty, setQty] = useState(1);
 
@@ -46,7 +60,12 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
   const handleWishlist = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    dispatch(toggleWishlist(product));
+    
+    if (!userInfo) return alert('Please login to add items to wishlist');
+    
+    // Optimistic UI update
+    setWishlistedLocal(!wishlistedLocal);
+    dispatch(toggleWishlistAsync(product));
     if (navigator.vibrate) navigator.vibrate(30);
   };
 
@@ -59,35 +78,35 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         {viewMode !== 'list' && (
-          <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-primary uppercase tracking-widest border border-white/20">
+          <div className="absolute bottom-3 left-3 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-primary uppercase tracking-widest border border-white/20">
             {t(`categories.${product.category?.toLowerCase().replace(' ', '_') || 'all'}`)}
           </div>
         )}
         {product.stock <= 5 && product.stock > 0 && viewMode !== 'list' && (
-          <div className="absolute top-3 right-10 bg-red-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest">
+          <div className="absolute top-3 left-12 z-10 bg-red-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest">
             {t('only_left', { count: product.stock })}
           </div>
         )}
         {/* Chat with supplier button */}
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowChat(true); }}
-          className="absolute top-2.5 left-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-primary hover:scale-110"
+          className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-primary hover:scale-110"
           title="Chat with Farmer"
         >
-          <MessageSquare size={13} />
+          <MessageSquare size={14} />
         </button>
 
         {/* Heart / Wishlist Button */}
         <button
           onClick={handleWishlist}
-          className={`absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 ${
-            isWishlisted 
+          className={`absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-90 ${
+            wishlistedLocal 
               ? 'bg-red-500 text-white scale-110' 
               : 'bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-red-400 hover:scale-110'
           }`}
-          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          title={wishlistedLocal ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart size={13} fill={isWishlisted ? 'currentColor' : 'none'} />
+          <Heart size={14} fill={wishlistedLocal ? 'currentColor' : 'none'} />
         </button>
 
         {showChat && (

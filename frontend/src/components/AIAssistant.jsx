@@ -180,8 +180,11 @@ const AIAssistant = () => {
       // Auto-speak the AI response
       speakResponse(data.response);
     } catch (error) {
-      console.error(error);
-      const errMsg = language === 'hi' ? 'जवाब लाने में विफल। कृपया पुनः प्रयास करें।' : 'Failed to fetch response. Please retry.';
+      console.error("AI Assistant Fetch Error:", error);
+      const errorDetail = error.response?.data?.message || error.message;
+      const errMsg = language === 'hi' 
+        ? `जवाब लाने में विफल (${errorDetail})। कृपया पुनः प्रयास करें।` 
+        : `Failed to fetch response: ${errorDetail}. Please retry.`;
       setChatHistory((prev) => [...prev, { role: 'model', text: errMsg }]);
     } finally {
       setLoading(false);

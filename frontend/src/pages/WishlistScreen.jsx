@@ -1,7 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Trash2 } from 'lucide-react';
-import { toggleWishlist } from '../store/slices/wishlistSlice';
+import { toggleWishlistAsync } from '../store/slices/wishlistSlice';
 import { addToCart } from '../store/slices/cartSlice';
 import { useToast } from '../components/ToastProvider';
 
@@ -11,17 +11,20 @@ const WishlistScreen = () => {
   const { items } = useSelector(state => state.wishlist);
 
   const handleRemove = (product) => {
-    dispatch(toggleWishlist(product));
+    // If from backend, it has productId. toggleWishlistAsync expects product object with _id
+    const prodToToggle = { ...product, _id: product.productId || product._id };
+    dispatch(toggleWishlistAsync(prodToToggle));
     toast.info(`${product.name} removed from wishlist`);
   };
 
   const handleAddToCart = (product) => {
+    const realId = product.productId || product._id;
     dispatch(addToCart({
-      product: product._id,
+      product: realId,
       name: product.name,
       image: product.images?.[0],
       price: product.price,
-      countInStock: product.stock,
+      countInStock: product.stock || 99,
       unit: product.unit || 'kg',
       qty: 1,
       supplier: product.supplier?._id || product.supplier,

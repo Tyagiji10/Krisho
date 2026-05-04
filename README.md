@@ -38,6 +38,11 @@ An intelligent AI helper that assists farmers and consumers alike.
 *   **Razorpay Integration:** Secure, encrypted payments with automated order reconciliation.
 *   **Real-time Notifications:** Uses **Socket.io** to push live order alerts to suppliers instantly.
 
+### ❤️ Personalized Wishlist
+*   **Instant Feedback:** Optimistic UI updates provide immediate visual confirmation when saving favorite products.
+*   **Cloud Persistence:** Wishlist data is securely synced with the Firestore backend, ensuring lists are preserved across all devices.
+*   **Seamless Integration:** Quick-access "My Wishlist" portals embedded directly into the main navigation and profile dashboards.
+
 ---
 
 ## 🛠️ Technology Stack

@@ -39,51 +39,45 @@ export const getProducts = async (req, res, next) => {
 
     if (keywordText) {
       const expandedKeywords = await getMultilingualKeywords(keywordText);
+      const searchTerms = [keywordText.toLowerCase(), ...expandedKeywords];
       
       const getStringSimilarity = (str1, str2) => {
-        const s1 = str1.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, '');
-        const s2 = str2.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').replace(/\s+/g, '');
+        const s1 = str1.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').trim();
+        const s2 = str2.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '').trim();
         
         if (s1 === s2) return 1.0;
-        if (s1.length < 2 || s2.length < 2) return 0.0;
+        if (s1.includes(s2) || s2.includes(s1)) return 0.9; // High priority for phrase inclusion
 
-        const bigrams1 = new Map();
-        for (let i = 0; i < s1.length - 1; i++) {
-          const bigram = s1.slice(i, i + 2);
-          const count = bigrams1.has(bigram) ? bigrams1.get(bigram) + 1 : 1;
-          bigrams1.set(bigram, count);
-        }
+        const words1 = s1.split(/\s+/);
+        const words2 = s2.split(/\s+/);
 
-        let intersection = 0;
-        for (let i = 0; i < s2.length - 1; i++) {
-          const bigram = s2.slice(i, i + 2);
-          const count = bigrams1.has(bigram) ? bigrams1.get(bigram) : 0;
-          if (count > 0) {
-            bigrams1.set(bigram, count - 1);
-            intersection++;
-          }
-        }
+        // Check if any word in the search is exactly in the product name
+        const hasExactWordMatch = words2.some(w2 => words1.some(w1 => w1 === w2));
+        if (hasExactWordMatch) return 0.8;
 
-        return (2.0 * intersection) / (s1.length + s2.length - 2);
+        return 0.0; // Stricter: if no word match or phrase inclusion, it's not a match
       };
 
       products = products.filter(p => {
         const prodName = p.name.toLowerCase();
         const hashtags = (p.hashtags || []).map(h => h.toLowerCase());
 
-        return expandedKeywords.some(key => {
-          if (prodName.includes(key) || key.includes(prodName)) return true;
-          if (hashtags.some(h => h.includes(key) || key.includes(h))) return true;
+        return searchTerms.some(key => {
+          const score = getStringSimilarity(prodName, key);
+          if (score >= 0.8) return true;
+          
+          // Check hashtags strictly
+          if (hashtags.some(h => h === key || h.includes(key))) return true;
 
-          if (getStringSimilarity(p.name, key) >= 0.70) return true;
-
-          const prodWords = prodName.split(/\s+/);
-          const keyWords = key.split(/\s+/);
-
-          return prodWords.some(pw => 
-            keyWords.some(kw => kw.length > 1 && (pw.includes(kw) || kw.includes(pw)))
-          );
+          return false;
         });
+      });
+
+      // Sort by similarity score if keyword is present
+      products.sort((a, b) => {
+        const scoreA = Math.max(...searchTerms.map(key => getStringSimilarity(a.name, key)));
+        const scoreB = Math.max(...searchTerms.map(key => getStringSimilarity(b.name, key)));
+        return scoreB - scoreA;
       });
     }
     if (categoryText) {

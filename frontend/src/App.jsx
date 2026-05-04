@@ -12,15 +12,19 @@ import CartScreen from './pages/CartScreen';
 import ProfileScreen from './pages/ProfileScreen';
 import OrdersScreen from './pages/OrdersScreen';
 import WishlistScreen from './pages/WishlistScreen';
+import { Navigate } from 'react-router-dom';
 
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import CookiesPage from './pages/CookiesPage';
 
 import { useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import axios from 'axios';
+import { setWishlist } from './store/slices/wishlistSlice';
 
 function App() {
+  const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.auth);
 
   useEffect(() => {
@@ -37,6 +41,21 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (userInfo) {
+      const fetchWishlist = async () => {
+        try {
+          const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+          const { data } = await axios.get('/api/wishlist', config);
+          dispatch(setWishlist(data));
+        } catch (err) {
+          console.error('Failed to fetch wishlist', err);
+        }
+      };
+      fetchWishlist();
+    }
+  }, [userInfo, dispatch]);
+
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300 overflow-x-hidden relative">
       {/* Agricultural Doodle Pattern Overlay */}
@@ -52,6 +71,7 @@ function App() {
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/register" element={<RegisterScreen />} />
           <Route path="/dashboard" element={<DashboardScreen />} />
+          <Route path="/messages" element={<Navigate to="/dashboard?tab=messages" replace />} />
           <Route path="/cart" element={<CartScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
           <Route path="/orders" element={<OrdersScreen />} />

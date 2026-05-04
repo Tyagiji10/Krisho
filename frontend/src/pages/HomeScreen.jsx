@@ -23,7 +23,8 @@ import {
   Image as ImageIcon,
   ChevronRight,
   AlertTriangle,
-  Star
+  Star,
+  MessageCircle
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import MarketplaceScreen from './MarketplaceScreen';
@@ -751,6 +752,7 @@ const UserPortal = ({ user }) => {
           {[
             { label: 'Order History', icon: <History size={24}/>, link: user.role === 'supplier' ? '/dashboard?tab=orders' : '/orders', bg: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
             { label: 'Dashboard', icon: <LayoutDashboard size={24}/>, link: '/dashboard', bg: 'from-emerald-400 to-emerald-600', shadow: 'shadow-emerald-500/20', hide: user.role !== 'supplier' },
+            { label: 'Messages', icon: <MessageCircle size={24}/>, link: '/dashboard?tab=messages', bg: 'from-indigo-400 to-indigo-600', shadow: 'shadow-indigo-500/20' },
             { label: 'Cart', icon: <ShoppingCart size={24}/>, link: '/cart', bg: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-500/20' },
             { label: 'Profile', icon: <User size={24}/>, link: '/profile', bg: 'from-purple-500 to-pink-600', shadow: 'shadow-pink-500/20' },
           ].filter(action => !action.hide).map((action, idx) => (

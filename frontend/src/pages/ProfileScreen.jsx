@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { logout, setCredentials } from '../store/slices/authSlice';
+import { clearWishlist } from '../store/slices/wishlistSlice';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ToastProvider';
@@ -18,7 +20,8 @@ import {
   Star,
   X,
   Check,
-  LogOut
+  LogOut,
+  Heart
 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
@@ -65,6 +68,7 @@ const ProfileScreen = () => {
         };
         await axios.delete('/api/users/profile', config);
         dispatch(logout());
+        dispatch(clearWishlist());
         window.location.href = '/';
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to delete account');
@@ -174,6 +178,24 @@ const ProfileScreen = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         {/* Profile Card */}
         <div className="md:col-span-1 space-y-6">
+          {/* ... existing profile card ... */}
+          
+          {/* Quick Stats/Links */}
+          <div className="space-y-3">
+            <Link to="/wishlist" className="w-full p-4 bg-white dark:bg-slate-800 rounded-2xl border border-border dark:border-slate-700 flex items-center justify-between hover:border-red-500/50 hover:shadow-lg transition-all group">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-lg group-hover:scale-110 transition-transform">
+                  <Heart size={20} />
+                </div>
+                <div>
+                  <p className="font-black text-sm text-foreground dark:text-white">My Wishlist</p>
+                  <p className="text-[10px] text-slate-500">View saved products</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-slate-300 group-hover:text-red-500 transition-colors" />
+            </Link>
+          </div>
+
           <div className="bg-card dark:bg-slate-800 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-border dark:border-slate-700 text-center shadow-xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-primary/20 to-secondary/20 dark:from-primary/10 dark:to-secondary/10 -z-0"></div>
             
@@ -305,7 +327,7 @@ const ProfileScreen = () => {
             </div>
           </div>
 
-          <button onClick={() => { dispatch(logout()); window.location.href = '/login'; }} className="w-full py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark active:scale-95 touch-manipulation transition-all text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mb-3">
+          <button onClick={() => { dispatch(logout()); dispatch(clearWishlist()); window.location.href = '/login'; }} className="w-full py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary-dark active:scale-95 touch-manipulation transition-all text-sm shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mb-3">
             <LogOut size={18} /> Logout Session
           </button>
 
