@@ -1,4 +1,5 @@
 import { db } from '../config/firebaseAdmin.js';
+import { invalidateCache } from '../middleware/cacheMiddleware.js';
 
 // @desc    Create a new review
 // @route   POST /api/reviews
@@ -32,6 +33,9 @@ export const createReview = async (req, res, next) => {
       rating: avgRating,
       numReviews: reviews.length,
     });
+    
+    // Invalidate API response cache
+    invalidateCache(`/api/reviews/${supplierId}`);
 
     res.status(201).json({ message: 'Review added successfully' });
   } catch (error) {
@@ -46,13 +50,15 @@ export const getSupplierReviews = async (req, res, next) => {
   try {
     const reviewsSnapshot = await db.collection('reviews')
       .where('supplierId', '==', req.params.supplierId)
-      .orderBy('createdAt', 'desc')
       .get();
 
     const reviews = reviewsSnapshot.docs.map(doc => ({
       _id: doc.id,
       ...doc.data()
     }));
+
+    // Sort in memory to bypass Firestore index requirement
+    reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json(reviews);
   } catch (error) {

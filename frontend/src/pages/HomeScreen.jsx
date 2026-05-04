@@ -47,6 +47,7 @@ const SupplierPortal = ({ user }) => {
   
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(user?.totalEarnings || 0);
   const [selectedDashboardCategory, setSelectedDashboardCategory] = useState('All');
@@ -71,9 +72,10 @@ const SupplierPortal = ({ user }) => {
     setIsLoading(true);
     try {
       const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-      const [orderRes, productRes] = await Promise.all([
+      const [orderRes, productRes, reviewRes] = await Promise.all([
         axios.get(`/api/orders/supplier`, config),
-        axios.get(`/api/products?keyword=&city=${userInfo.city}`, config)
+        axios.get(`/api/products?keyword=&city=${userInfo.city}`, config),
+        axios.get(`/api/reviews/${userInfo._id}`, config).catch(() => ({ data: [] }))
       ]);
       
       const rawProducts = productRes?.data?.products || [];
@@ -85,6 +87,7 @@ const SupplierPortal = ({ user }) => {
       
       setOrders(rawOrders);
       setProducts(myProducts);
+      setReviews(Array.isArray(reviewRes.data) ? reviewRes.data : []);
 
       try {
         const userRes = await axios.get(`/api/users/profile`, config);
@@ -300,6 +303,7 @@ const SupplierPortal = ({ user }) => {
       setIsAiCategorizing(false);
     }
   };
+  const grossEarnings = orders.reduce((acc, order) => acc + (order.totalPrice || 0), 0);
 
   return (
     <>
@@ -316,7 +320,7 @@ const SupplierPortal = ({ user }) => {
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
-          { label: 'Gross Earnings', value: `₹${(totalEarnings || 0).toLocaleString()}`, icon: <TrendingUp size={24}/>, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/30', tabId: 'payments' },
+          { label: 'Gross Earnings', value: `₹${grossEarnings.toLocaleString()}`, icon: <TrendingUp size={24}/>, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/30', tabId: 'payments' },
           { label: 'My Products', value: products.length, icon: <Package size={24}/>, gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/30', tabId: 'products' },
           { label: 'Total Orders', value: orders.length, icon: <ShoppingCart size={24}/>, gradient: 'from-indigo-500 to-blue-600', shadow: 'shadow-indigo-500/30', tabId: 'orders' }
         ].map((stat, idx) => (
@@ -554,25 +558,32 @@ const SupplierPortal = ({ user }) => {
             <h3 className="text-xl font-black text-slate-900 dark:text-white">Customer Reviews</h3>
             <p className="text-xs text-slate-400">See what buyers are saying about your farm produce</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {[
-                { id: 1, name: 'Shaurya Pratap', item: 'Premium Wheat', rating: 5, comment: 'Extremely fresh and completely clean. Very happy with fast delivery!' },
-                { id: 2, name: 'Amit Sharma', item: 'Organic Tomatoes', rating: 4, comment: 'Delicious organic tomatoes. A bit small but flavorful.' }
-              ].map(review => (
-                <div key={review.id} className="bg-slate-50 dark:bg-slate-800 p-5 rounded-[1.8rem] border border-border space-y-2">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white">{review.name}</h4>
-                    <div className="flex items-center text-amber-400">
-                      {Array.from({ length: review.rating }).map((_, i) => (
-                        <Star key={i} size={14} fill="currentColor" />
-                      ))}
+            {reviews.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                {reviews.map(review => (
+                  <div key={review._id || review.id} className="bg-slate-50 dark:bg-slate-800 p-5 rounded-[1.8rem] border border-border space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white">{review.consumerName || review.name}</h4>
+                      <div className="flex items-center text-amber-400">
+                        {Array.from({ length: review.rating }).map((_, i) => (
+                          <Star key={i} size={14} fill="currentColor" />
+                        ))}
+                      </div>
                     </div>
+                    <p className="text-[10px] font-black text-primary uppercase">{review.item || 'Verified Purchase'}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-bold">"{review.comment}"</p>
                   </div>
-                  <p className="text-[10px] font-black text-primary uppercase">{review.item}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-bold">"{review.comment}"</p>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-800 p-12 rounded-[2rem] border border-dashed border-border text-center space-y-4">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-primary">
+                  <MessageCircle size={32} />
                 </div>
-              ))}
-            </div>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">No reviews yet</h4>
+                <p className="text-sm text-slate-500">When customers review your produce, they will appear here.</p>
+              </div>
+            )}
           </div>
         )}
       </section>

@@ -41,13 +41,15 @@ export const getMessages = async (req, res, next) => {
 
     const snapshot = await db.collection('messages')
       .where('chatRoomId', '==', chatRoomId)
-      .orderBy('createdAt', 'asc')
       .get();
 
     const messages = [];
     snapshot.forEach(doc => {
       messages.push({ _id: doc.id, ...doc.data() });
     });
+
+    // Sort messages in memory to bypass Firestore composite index requirements
+    messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     res.json(messages);
   } catch (error) {

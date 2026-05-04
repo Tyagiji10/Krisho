@@ -7,13 +7,14 @@ import {
   updateProduct,
 } from '../controllers/productController.js';
 import { protect, supplier } from '../middleware/authMiddleware.js';
+import { cacheResponse } from '../middleware/cacheMiddleware.js';
 
 const router = express.Router();
 
-router.route('/').get(getProducts).post(protect, supplier, createProduct);
+router.route('/').get(cacheResponse(300), getProducts).post(protect, supplier, createProduct);
 router
   .route('/:id')
-  .get(getProductById)
+  .get(cacheResponse(600), getProductById)
   .delete(protect, supplier, deleteProduct)
   .put(protect, supplier, updateProduct);
 

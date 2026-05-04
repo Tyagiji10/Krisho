@@ -376,13 +376,20 @@ const DashboardScreen = () => {
 
         const compressedImage = await compressImage(finalImageUrl);
 
-        const { getStorage, ref, uploadString, getDownloadURL } = await import('firebase/storage');
-        await import('../firebase.js');
-        const storage = getStorage();
-        const imageRef = ref(storage, `products/${userInfo._id}_${Date.now()}`);
+        // Convert base64 to Blob for multipart upload
+        const res = await fetch(compressedImage);
+        const blob = await res.blob();
+        const formData = new FormData();
+        formData.append('image', blob, 'product.jpg');
+
+        const uploadConfig = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
         
-        const snapshot = await uploadString(imageRef, compressedImage, 'data_url');
-        finalImageUrl = await getDownloadURL(snapshot.ref);
+        const uploadRes = await axios.post('/api/upload', formData, uploadConfig);
+        finalImageUrl = uploadRes.data.imageUrl;
       }
 
       const config = { 

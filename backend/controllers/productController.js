@@ -1,6 +1,7 @@
 import { db } from '../config/firebaseAdmin.js';
 import cache from '../utils/cache.js';
 import { getMultilingualKeywords } from '../utils/gemini.js';
+import { invalidateCache } from '../middleware/cacheMiddleware.js';
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -188,6 +189,7 @@ export const deleteProduct = async (req, res, next) => {
       // Invalidate cache
       cache.del('all_products');
       cache.del(`product_${req.params.id}`);
+      invalidateCache('/api/products');
       
       return res.json({ message: 'Product removed' });
     }
@@ -233,6 +235,7 @@ export const createProduct = async (req, res, next) => {
     
     // Invalidate cache
     cache.del('all_products');
+    invalidateCache('/api/products');
     
     return res.status(201).json({ _id: docRef.id, ...newProductData });
   } catch (error) {
@@ -269,6 +272,7 @@ export const updateProduct = async (req, res, next) => {
       // Invalidate cache
       cache.del('all_products');
       cache.del(`product_${req.params.id}`);
+      invalidateCache('/api/products');
       
       const updatedDoc = await docRef.get();
       return res.json({ _id: updatedDoc.id, ...updatedDoc.data() });

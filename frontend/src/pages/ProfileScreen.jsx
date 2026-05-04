@@ -131,10 +131,25 @@ const ProfileScreen = () => {
 
       const compressedImage = await compressImage(imageSrc);
       
+      // Convert base64 to Blob for multipart upload
+      const res = await fetch(compressedImage);
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append('image', blob, 'profile.jpg');
+
+      const uploadConfig = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+      
+      const uploadRes = await axios.post('/api/upload', formData, uploadConfig);
+      const profileImageUrl = uploadRes.data.imageUrl;
+      
       const config = {
         headers: { Authorization: `Bearer ${userInfo.token}` },
       };
-      const { data } = await axios.put('/api/users/profile', { profileImage: compressedImage }, config);
+      const { data } = await axios.put('/api/users/profile', { profileImage: profileImageUrl }, config);
       dispatch(setCredentials(data));
       toast.success('Profile photo updated!');
       
