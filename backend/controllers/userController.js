@@ -29,12 +29,12 @@ export const authUser = async (req, res, next) => {
     if (userDoc && userDoc.exists) {
       const userData = userDoc.data();
       const userId = userDoc.id;
-      
+
       // Update firebaseUid if it was missing
       if (firebaseUid && userData.firebaseUid !== firebaseUid) {
         await db.collection('users').doc(userId).update({ firebaseUid });
       }
-      
+
       res.json({
         _id: userId,
         ...userData,
@@ -127,7 +127,7 @@ export const googleLogin = async (req, res, next) => {
         createdAt: new Date().toISOString(),
       };
       await db.collection('users').doc(firebaseUid).set(newUser);
-      
+
       res.json({
         _id: firebaseUid,
         ...newUser,
@@ -175,10 +175,10 @@ export const updateUserProfile = async (req, res, next) => {
       if (state) updateData.state = state;
       if (city) updateData.city = city;
       if (profileImage !== undefined) updateData.profileImage = profileImage;
-      
+
       await userRef.update(updateData);
       const updatedDoc = await userRef.get();
-      
+
       res.json({
         _id: updatedDoc.id,
         ...updatedDoc.data(),

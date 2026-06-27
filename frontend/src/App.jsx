@@ -60,7 +60,7 @@ function App() {
     <div className="min-h-screen flex flex-col transition-colors duration-300 overflow-x-hidden relative">
       {/* Agricultural Doodle Pattern Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.15] dark:opacity-[0.25] dark:invert dark:hue-rotate-180 brightness-100 dark:brightness-[2] dark:contrast-[1.5]"
-           style={{ backgroundImage: "url('/agri_doodle_pattern_1777442677675.png')", backgroundRepeat: 'repeat', backgroundSize: '500px' }}>
+        style={{ backgroundImage: "url('/agri_doodle_pattern_1777442677675.png')", backgroundRepeat: 'repeat', backgroundSize: '500px' }}>
       </div>
 
       <Navbar />

@@ -35,7 +35,7 @@ const LoginScreen = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+
     try {
       // 1. Sign in with Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -46,7 +46,7 @@ const LoginScreen = () => {
 
       dispatch(setCredentials({ ...data }));
       navigate('/');
-      
+
       // 3. Attempt to auto-update location in background (non-blocking)
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async (position) => {
@@ -54,15 +54,15 @@ const LoginScreen = () => {
             const { latitude, longitude } = position.coords;
             const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
             const address = geoRes.data.address;
-            
+
             const detectedState = address.state || address.region;
             const detectedCity = address.city || address.town || address.village || address.suburb;
 
             if (detectedState && detectedCity) {
               const config = { headers: { Authorization: `Bearer ${data.token}` } };
-              const updateRes = await axios.put('/api/users/profile', { 
-                state: detectedState, 
-                city: detectedCity 
+              const updateRes = await axios.put('/api/users/profile', {
+                state: detectedState,
+                city: detectedCity
               }, config);
               dispatch(setCredentials({ ...updateRes.data }));
             }
@@ -94,8 +94,8 @@ const LoginScreen = () => {
       setResetSuccess('Password reset link sent to your email!');
       setTimeout(() => setShowResetModal(false), 3000);
     } catch (err) {
-      setResetError(err.message.includes('auth/user-not-found') 
-        ? 'No account found with this email.' 
+      setResetError(err.message.includes('auth/user-not-found')
+        ? 'No account found with this email.'
         : 'Failed to send reset email. Try again.');
     } finally {
       setIsLoading(false);
@@ -113,14 +113,14 @@ const LoginScreen = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       const { data } = await axios.post('/api/users/google-login', {
         name: user.displayName,
         email: user.email,
         firebaseUid: user.uid,
         photo: user.photoURL
       });
-      
+
       // If user info is incomplete (missing city/state), show onboarding
       if (!data.city || !data.state) {
         dispatch(setCredentials({ ...data })); // Save initial token
@@ -136,15 +136,15 @@ const LoginScreen = () => {
               const { latitude, longitude } = position.coords;
               const geoRes = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
               const address = geoRes.data.address;
-              
+
               const detectedState = address.state || address.region;
               const detectedCity = address.city || address.town || address.village || address.suburb;
 
               if (detectedState && detectedCity) {
                 const config = { headers: { Authorization: `Bearer ${data.token}` } };
-                const updateRes = await axios.put('/api/users/profile', { 
-                  state: detectedState, 
-                  city: detectedCity 
+                const updateRes = await axios.put('/api/users/profile', {
+                  state: detectedState,
+                  city: detectedCity
                 }, config);
                 dispatch(setCredentials({ ...updateRes.data }));
               }
@@ -187,7 +187,7 @@ const LoginScreen = () => {
       <AnimatePresence>
         {showOnboarding && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] p-6 md:p-10 shadow-2xl border border-border dark:border-slate-700"
@@ -209,11 +209,10 @@ const LoginScreen = () => {
                         key={role}
                         type="button"
                         onClick={() => setOnboardingData({ ...onboardingData, role })}
-                        className={`py-3 md:py-4 rounded-xl md:rounded-2xl font-black transition-all capitalize text-xs md:text-base ${
-                          onboardingData.role === role 
-                            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' 
-                            : 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-700'
-                        }`}
+                        className={`py-3 md:py-4 rounded-xl md:rounded-2xl font-black transition-all capitalize text-xs md:text-base ${onboardingData.role === role
+                          ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
+                          : 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-700'
+                          }`}
                       >
                         {role}
                       </button>
@@ -275,19 +274,19 @@ const LoginScreen = () => {
 
         {showResetModal && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[2rem] p-6 md:p-10 shadow-2xl border border-border dark:border-slate-700 relative"
             >
-              <button 
+              <button
                 onClick={() => setShowResetModal(false)}
                 className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X size={20} />
               </button>
-              
+
               <div className="text-center mb-8">
                 <div className="bg-primary/10 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 text-primary">
                   <Lock size={24} />
@@ -337,7 +336,7 @@ const LoginScreen = () => {
         )}
       </AnimatePresence>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white dark:bg-slate-800 p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border border-border dark:border-slate-700"
@@ -376,7 +375,7 @@ const LoginScreen = () => {
           <div className="space-y-1.5">
             <div className="flex justify-between items-center px-1">
               <label className="text-[10px] md:text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Password</label>
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowResetModal(true)}
                 className="text-[10px] md:text-xs font-bold text-primary hover:underline transition-all"

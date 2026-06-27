@@ -65,7 +65,7 @@ const RegisterScreen = () => {
 
   return (
     <div className="max-w-2xl mx-auto my-8 px-8">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="bg-white dark:bg-slate-800 p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border border-border dark:border-slate-700"
@@ -93,11 +93,10 @@ const RegisterScreen = () => {
               <button
                 type="button"
                 onClick={() => setRole('consumer')}
-                className={`p-3 md:p-4 rounded-xl md:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${
-                  role === 'consumer' 
-                    ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary' 
-                    : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-200 dark:hover:border-slate-600'
-                }`}
+                className={`p-3 md:p-4 rounded-xl md:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${role === 'consumer'
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary'
+                  : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-200 dark:hover:border-slate-600'
+                  }`}
               >
                 <User size={18} md:size={24} />
                 <span className="font-bold text-xs md:text-base">Consumer</span>
@@ -105,11 +104,10 @@ const RegisterScreen = () => {
               <button
                 type="button"
                 onClick={() => setRole('supplier')}
-                className={`p-3 md:p-4 rounded-xl md:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${
-                  role === 'supplier' 
-                    ? 'border-secondary bg-secondary/5 dark:bg-secondary/10 text-secondary' 
-                    : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-200 dark:hover:border-slate-600'
-                }`}
+                className={`p-3 md:p-4 rounded-xl md:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 ${role === 'supplier'
+                  ? 'border-secondary bg-secondary/5 dark:bg-secondary/10 text-secondary'
+                  : 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-500 hover:border-slate-200 dark:hover:border-slate-600'
+                  }`}
               >
                 <Briefcase size={18} md:size={24} />
                 <span className="font-bold text-xs md:text-base">Farmer</span>
